@@ -1,0 +1,231 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Time-segmentation for t2-shuffling</title><meta name="generator" content="MATLAB 9.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2019-04-04"><meta name="DC.source" content="LinopScript_TS_Doc1.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>Time-segmentation for t2-shuffling</h1><!--introduction--><p>Let's see.</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Now as time-segmentation</a></li><li><a href="#4">Comparison:</a></li><li><a href="#5">Summary</a></li></ul></div><h2 id="1">Now as time-segmentation</h2><p>The t2-shuffling approach can be easily modified to using other components.</p><p>One option is the pretty universal time segments:</p><pre class="codeinput">nEchos=size(Phi,1);
+nTS=8;
+TSB=GetTSCoeffsByLinear(nEchos,nTS);
+figure;subplot(1,2,1);plot(Phi);title(<span class="string">"Tamir's T_2 components"</span>);
+subplot(1,2,2);plot(TSB);title(<span class="string">"Fessler's time-segmentation"</span>);
+</pre><img vspace="5" hspace="5" src="LinopScript_TS_Doc1_01.png" alt=""> <p>Plugging the time-segments as the components:</p><pre class="codeinput">PhiP_TS=permute(TSB,[3 4 5 6 7 1 2]);              <span class="comment">%   1     1         1     1     1    80     10</span>
+
+PT_TS=sum(masks.*permute(TSB,[3 4 5 1 2]),6);
+TPT1_TS=sum(PT_TS.*permute(TSB',[3 4 5 2 6 1]),4);
+
+TPT1p_TS=permute(TPT1_TS,[1 2 3 5 6 4]);
+
+
+ET_TS=permute(eye(nTS),[3:8 1 2]);                  <span class="comment">%   1     1         1     1     1     1     10     10</span>
+TPT1pBart_TS=permute(TPT1p_TS,[1 2 3 6 7 8 4 5]);   <span class="comment">%   260   240       1     1     1     1     10     10</span>
+
+WarmStartZeros_TS=zeros([260 240 1 1 1 1 nTS]);
+WarmStartZerosFN_TS=[BaseFolder <span class="string">'T2ShflZ_TS'</span>];
+writecfl(WarmStartZerosFN_TS,WarmStartZeros_TS);
+
+ScriptsPart_TS=[<span class="string">' -W '</span> WarmStartZerosFN_TS <span class="string">' -Q '</span> T2ShflScriptFN_FPart <span class="string">' -M '</span> T2ShflScriptFN_NPart <span class="string">' '</span> T2ShflScriptFN];
+disp(<span class="string">'Prepared for TS'</span>);
+</pre><pre class="codeoutput">Prepared for TS
+</pre><pre class="codeinput"><span class="comment">% calling recon</span>
+<span class="comment">%</span>
+LambdaWTS=30;
+RhoTS=10000;
+LLR_Lambda=30;
+out_TSc=bart([<span class="string">'picsS -m -b 10 -u '</span> num2str(RhoTS) <span class="string">' -R W:3:64:'</span> num2str(LambdaWTS) <span class="string">' -R L:3:3:'</span> num2str(LLR_Lambda) <span class="string">' '</span> ScriptsPart_TS],kspP,SensP,masksP,PhiP_TS,TPT1pBart_TS,ET_TS);
+</pre><pre class="codeoutput">Warm start: Starting with [260 240   1   1   1   1   8   1   1   1   1   1   1   1   1   1 ]
+main_picsS
+Reading files
+Reading /tmp/tpd95cd563_e220_47b7_93e8_398e6543fd61in1: 260 240 1 8 1 80 1 1 1 1 1 1 1 1 1 1
+Reading /tmp/tpd95cd563_e220_47b7_93e8_398e6543fd61in2: 260 240 1 8 1 1 1 1 1 1 1 1 1 1 1 1
+Reading /tmp/tpd95cd563_e220_47b7_93e8_398e6543fd61in3: 260 240 1 1 1 80 1 1 1 1 1 1 1 1 1 1
+Reading /tmp/tpd95cd563_e220_47b7_93e8_398e6543fd61in4: 1 1 1 1 1 80 8 1 1 1 1 1 1 1 1 1
+Reading /tmp/tpd95cd563_e220_47b7_93e8_398e6543fd61in5: 260 240 1 1 1 1 8 8 1 1 1 1 1 1 1 1
+Reading /tmp/tpd95cd563_e220_47b7_93e8_398e6543fd61in6: 1 1 1 1 1 1 8 8 1 1 1 1 1 1 1 1
+Finished reading files
+Warm start: CurDims:[260 240   1   1   1   1   8   1   1   1   1   1   1   1   1   1 ]
+CurDims:[260 240   1   1   1   1   8   1   1   1   1   1   1   1   1   1 ]
+# File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+# File 3 is components: Phi
+# PRINT 52
+Adding: FMAC with file #1 squash flag 0
+Adding: FFT with flag 3
+Adding: FMAC with file #3 squash flag 64
+Adding: FMAC with file #2 squash flag 0
+# PRINT 5
+
+Read forward script. dimsAfterF:[260 240   1   8   1  80   1   1   1   1   1   1   1   1   1   1 ]
+# Forward part of Normal operator:
+# File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+# File 3 is components: Phi 
+# File 4 is TPT, File 5 is ET
+Adding: FMAC with file #1 squash flag 0
+Adding: FFT with flag 3
+
+# File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+# File 3 is components: Phi 
+# File 4 is TPT, File 5 is ET
+Adding: FMAC with file #4 squash flag 64
+Adding: FMAC with file #5 squash flag 128
+
+OK linop script reading
+Inverse scaling of the data: 15074.718750
+Preparing prox funcs
+l1-wavelet regularization: 30.000000
+lowrank regularization: 30.000000
+ADMM
+Preparing operator
+sense_recon_create
+sense_recon_create pattern
+Now applying
+itop_apply!!
+Now freeing
+Total Time: 37.450618
+Clearing files' memory
+Clearing /tmp/tpd95cd563_e220_47b7_93e8_398e6543fd61in1
+Clearing /tmp/tpd95cd563_e220_47b7_93e8_398e6543fd61in2
+Clearing /tmp/tpd95cd563_e220_47b7_93e8_398e6543fd61in3
+Clearing /tmp/tpd95cd563_e220_47b7_93e8_398e6543fd61in4
+Clearing /tmp/tpd95cd563_e220_47b7_93e8_398e6543fd61in5
+Clearing /tmp/tpd95cd563_e220_47b7_93e8_398e6543fd61in6
+Finished Clearing files' memory
+Size: 260  240    1    1    1    1    8
+</pre><h2 id="4">Comparison:</h2><p>Unfold all time-points for the T2-components and for the time-segmentation:</p><pre class="codeinput">imMatlab = T_for(squeeze(alpha));
+imBartT2 = T_for(squeeze(RecT2Shf2));
+T_for_TS = @(a) temporal_forward(a, TSB);
+imBartTS = T_for_TS(squeeze(out_TSc));
+ShowIdxs=floor(linspace(1,80,5));
+BFac=grmss(imMatlab(:,:,ShowIdxs))/grmss(imBartT2(:,:,ShowIdxs));
+AFac=grmss(imMatlab(:,:,ShowIdxs))/grmss(imBartTS(:,:,ShowIdxs));
+fgmontage(cat(4,imMatlab(:,:,ShowIdxs),imBartT2(:,:,ShowIdxs)*BFac,imBartTS(:,:,ShowIdxs)*AFac));
+title(<span class="string">'Recon comparison: LLR'</span>,<span class="string">'FontSize'</span>,20);
+ylabel(<span class="string">'Time-segments           T_2-components BART          T_2-components MATLAB'</span>,<span class="string">'FontSize'</span>,16);
+xlabel(<span class="string">'time points:  1                        20                          40                              60                            80'</span>,<span class="string">'FontSize'</span>,20);
+</pre><pre class="codeoutput">Warning: Showing abs 
+</pre><img vspace="5" hspace="5" src="LinopScript_TS_Doc1_02.png" alt=""> <h2 id="5">Summary</h2><p>Can't say what's better, especially without ground-truth.</p><p>However, Time-segments are universal; did not need to prepare the components according to the FSE flip angle scheme; and most importantly, are much more robust to deal with field inhomogeneity.</p><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2018a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% Time-segmentation for t2-shuffling
+% Let's see.
+%% Now as time-segmentation
+% The t2-shuffling approach can be easily modified to using other components.
+%
+% One option is the pretty universal time segments:
+% 
+nEchos=size(Phi,1);
+nTS=8;
+TSB=GetTSCoeffsByLinear(nEchos,nTS);
+figure;subplot(1,2,1);plot(Phi);title("Tamir's T_2 components");
+subplot(1,2,2);plot(TSB);title("Fessler's time-segmentation");
+%%
+% Plugging the time-segments as the components:
+PhiP_TS=permute(TSB,[3 4 5 6 7 1 2]);              %   1     1         1     1     1    80     10
+
+PT_TS=sum(masks.*permute(TSB,[3 4 5 1 2]),6);
+TPT1_TS=sum(PT_TS.*permute(TSB',[3 4 5 2 6 1]),4);
+
+TPT1p_TS=permute(TPT1_TS,[1 2 3 5 6 4]);
+
+
+ET_TS=permute(eye(nTS),[3:8 1 2]);                  %   1     1         1     1     1     1     10     10
+TPT1pBart_TS=permute(TPT1p_TS,[1 2 3 6 7 8 4 5]);   %   260   240       1     1     1     1     10     10
+
+WarmStartZeros_TS=zeros([260 240 1 1 1 1 nTS]);
+WarmStartZerosFN_TS=[BaseFolder 'T2ShflZ_TS'];
+writecfl(WarmStartZerosFN_TS,WarmStartZeros_TS);
+
+ScriptsPart_TS=[' -W ' WarmStartZerosFN_TS ' -Q ' T2ShflScriptFN_FPart ' -M ' T2ShflScriptFN_NPart ' ' T2ShflScriptFN];
+disp('Prepared for TS');
+
+%%
+
+% calling recon
+%
+LambdaWTS=30;
+RhoTS=10000;
+LLR_Lambda=30;
+out_TSc=bart(['picsS -m -b 10 -u ' num2str(RhoTS) ' -R W:3:64:' num2str(LambdaWTS) ' -R L:3:3:' num2str(LLR_Lambda) ' ' ScriptsPart_TS],kspP,SensP,masksP,PhiP_TS,TPT1pBart_TS,ET_TS);
+%% Comparison:
+% Unfold all time-points for the T2-components and for the
+% time-segmentation:
+
+imMatlab = T_for(squeeze(alpha));
+imBartT2 = T_for(squeeze(RecT2Shf2));
+T_for_TS = @(a) temporal_forward(a, TSB);
+imBartTS = T_for_TS(squeeze(out_TSc));
+ShowIdxs=floor(linspace(1,80,5));
+BFac=grmss(imMatlab(:,:,ShowIdxs))/grmss(imBartT2(:,:,ShowIdxs));
+AFac=grmss(imMatlab(:,:,ShowIdxs))/grmss(imBartTS(:,:,ShowIdxs));
+fgmontage(cat(4,imMatlab(:,:,ShowIdxs),imBartT2(:,:,ShowIdxs)*BFac,imBartTS(:,:,ShowIdxs)*AFac));
+title('Recon comparison: LLR','FontSize',20);
+ylabel('Time-segments           T_2-components BART          T_2-components MATLAB','FontSize',16);
+xlabel('time points:  1                        20                          40                              60                            80','FontSize',20);
+%% Summary
+% Can't say what's better, especially without ground-truth.
+%
+% However, Time-segments are universal; 
+% did not need to prepare the components according to the FSE flip angle scheme;
+% and most importantly, are much more robust to deal with field inhomogeneity.
+##### SOURCE END #####
+--></body></html>
