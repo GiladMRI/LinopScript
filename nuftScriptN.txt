@@ -1,0 +1,10 @@
+fmac 1 0 # this is linop #0
+nufft 0 -1 -1 7 0 0 0 0
+NORMAL 000
+f 0  # this is calling the forward of linop #0 defined above
+dblsz 3 # padding
+fft 3
+fmac 2 0 # This is multplication with the Toeplitz-based kernel
+ifft 3
+halfsz 3
+a 0 # this is the adjoint of linop #0 defined above

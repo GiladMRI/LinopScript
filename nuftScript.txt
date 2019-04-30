@@ -1,0 +1,4 @@
+# fmac with file #1 - the sensitity maps, and no squashing
+# Then NUFT according to the trajectory in file #0 (no weights file, basis file, etc. NUFFT flags 7).
+fmac 1 0
+nufft 0 -1 -1 7 0 0 0 0

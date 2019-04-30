@@ -1,0 +1,11 @@
+fmac 1 0
+nufft 0 -1 -1 7 0 0 0 0
+NORMAL 000
+f 0
+# print 45
+dblsz 3
+fft 3
+fmac 2 0
+a 3     This is the adjoint of dblsz, i.e. cropping
+a 2     This is the adjoint of fft, i.e. ifft
+a 0
