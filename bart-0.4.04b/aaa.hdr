@@ -1,0 +1,8 @@
+# Dimensions
+260 240 1 1 1 1 8 1 1 1 1 1 1 1 1 1 
+# Command
+picsS -m -b 10 -u 10000 -R W:3:64:30 -R L:3:3:30 -W /autofs/space/daisy_002/users/Gilad/bart-0.4.04b/T2ShflZ_TS -Q /autofs/space/daisy_002/users/Gilad/bart-0.4.04b/t2shf2NF.txt -M /autofs/space/daisy_002/users/Gilad/bart-0.4.04b/t2shf2N.txt /autofs/space/daisy_002/users/Gilad/bart-0.4.04b/t2shf1.txt /tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130out1 /tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in1 /tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in2 /tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in3 /tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in4 /tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in5 /tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in6 
+# Files
+ >/autofs/space/daisy_002/users/Gilad/bart-0.4.04b/aaa >/tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130out1 </tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in6 </tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in5 </tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in4 </tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in3 </tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in2 </tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in1 </tmp/tpa0f741d7_571d_4f1d_8e87_58e4d360d130in1 </autofs/space/daisy_002/users/Gilad/bart-0.4.04b/T2ShflZ_TS
+# Creator
+BART v0.4.04

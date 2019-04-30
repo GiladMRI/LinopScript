@@ -1,0 +1,23 @@
+# File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+# File 3 is components: Phi 
+# File 4 is TPT, File 5 is ET
+X PRINT 3
+FMAC 4 64               # This is multiplication with TPT
+FMAC 5 128              # This is stable permute to the same size, strides
+X PRINT 4
+X enum mri_dims:
+X	READ_DIM,   0   1
+X	PHS1_DIM,   1   2
+X	PHS2_DIM,   2   4
+X	COIL_DIM,   3   8
+X	MAPS_DIM,   4   16
+X	TE_DIM,     5   32
+X	COEFF_DIM,  6   64
+X	COEFF2_DIM, 7   128
+X	ITER_DIM,   8   256
+X	CSHIFT_DIM, 9   512
+X	TIME_DIM,   10  1024
+X	TIME2_DIM,  11  2048
+X	LEVEL_DIM,  12  4096
+X	SLICE_DIM,  13  8192
+X	AVG_DIM,    14  16384

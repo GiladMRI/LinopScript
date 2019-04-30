@@ -1,0 +1,180 @@
+/* Copyright 2017. The Regents of the University of California.
+ * Copyright 2016-2018. Martin Uecker.
+ * All rights reserved. Use of this source code is governed by
+ * a BSD-style license which can be found in the LICENSE file.
+ *
+ * Authors:
+ * 2016,2018 Martin Uecker <martin.uecker@med.uni-goettingen.de>
+ * 2017 Jon Tamir <jtamir@eecs.berkeley.edu>
+ */
+
+#include <assert.h>
+
+#include "misc/misc.h"
+#include "misc/types.h"
+
+#include "num/multind.h"
+#include "num/ops.h"
+#include "num/iovec.h"
+
+#include "linops/linop.h"
+
+#include "iter/iter2.h"
+
+#include "itop.h"
+
+#include "misc/debug.h"
+
+
+struct itop_s {
+
+	INTERFACE(operator_data_t);
+
+	italgo_fun2_t italgo;
+	iter_conf* iconf;
+	struct iter_monitor_s* monitor;
+
+	const struct operator_s* op;
+	unsigned int num_funs;
+	long size;
+
+	const struct iovec_s* iov;
+
+	const float* init;
+
+	const struct operator_p_s** prox_funs;
+	const struct linop_s** prox_linops;
+};
+
+static DEF_TYPEID(itop_s);
+
+
+static void itop_apply(const operator_data_t* _data, unsigned int N, void* args[static N])
+{
+	assert(2 == N);
+	const auto data = CAST_DOWN(itop_s, _data);
+
+	if (NULL == data->init) {
+
+		md_clear(1, MD_DIMS(data->size), args[0], sizeof(float));
+
+	} else {
+
+		md_copy(data->iov->N, data->iov->dims, args[0], data->init, data->iov->size);
+	}
+
+	debug_printf(DP_INFO,"itop_apply!!\n");
+	// long tmp_dims[data->iov->N];
+	// debug_printf(DP_INFO,"Calling ADMM normaleq_op co dims:");
+	// // debug_print_dims(DP_INFO,operator_domain(normaleq_op)->N,operator_domain(normaleq_op)->dims);
+	// md_copy_dims(data->iov->N,tmp_dims,data->iov->dims);
+	// debug_print_dims(DP_INFO,data->iov->N,tmp_dims);
+	// debug_printf(DP_INFO,"A\n");
+	// complex float* tmp = create_cfl("/tmp/dcdcdc", 16,tmp_dims);
+	// debug_printf(DP_INFO,"B\n");
+	// debug_printf(DP_INFO,"B1\n");
+	// debug_printf(DP_INFO,"B15\n");
+	// md_clear(data->iov->N,tmp_dims, tmp, sizeof(complex float));
+	// debug_printf(DP_INFO,"B2\n");
+	// // // void md_copy(unsigned int D, const long dim[D], void* optr, const void* iptr, size_t size)
+	// // // md_copy(operator_domain(normaleq_op)->N, operator_domain(normaleq_op)->dims, tmp, image_adj ,CFL_SIZE);
+	// // debug_printf(DP_INFO,"C\n");
+	// // unmap_cfl(16, tmp_dims, tmp);
+	// // debug_printf(DP_INFO,"D\n");
+
+	data->italgo(data->iconf, data->op, data->num_funs, data->prox_funs, data->prox_linops, NULL, 
+			NULL, data->size, args[0], args[1], data->monitor);
+}
+
+static void itop_del(const operator_data_t* _data)
+{
+	auto data = CAST_DOWN(itop_s, _data);
+
+	iovec_free(data->iov);
+	operator_free(data->op);
+
+	if (NULL != data->init)
+		md_free(data->init);
+
+	if (NULL != data->prox_funs) {
+
+		for (unsigned int i = 0; i < data->num_funs; i++)
+			operator_p_free(data->prox_funs[i]);
+
+		xfree(data->prox_funs);
+	}
+
+	if (NULL != data->prox_linops) {
+
+		for (unsigned int i = 0; i < data->num_funs; i++)
+			linop_free(data->prox_linops[i]);
+
+		xfree(data->prox_linops);
+	}
+	
+	xfree(data);		
+}
+
+
+const struct operator_s* itop_create(	italgo_fun2_t italgo, iter_conf* iconf,
+					const float* init,
+					const struct operator_s* op,
+					unsigned int num_funs,
+					const struct operator_p_s* prox_funs[num_funs],
+					const struct linop_s* prox_linops[num_funs],
+					struct iter_monitor_s* monitor)
+{
+	PTR_ALLOC(struct itop_s, data);
+	SET_TYPEID(itop_s, data);
+
+	const struct iovec_s* iov;
+
+	if (NULL == op) {
+
+		assert(0 < num_funs);
+		iov = linop_domain(prox_linops[0]);
+
+	} else {
+
+		iov = operator_domain(op);
+	}
+
+	data->iconf = iconf;
+	data->italgo = italgo;
+	data->monitor = monitor;
+	data->op = (NULL == op) ? NULL : operator_ref(op);
+	data->num_funs = num_funs;
+	data->size = 2 * md_calc_size(iov->N, iov->dims);	// FIXME: do not assume complex
+	data->prox_funs = NULL;
+	data->prox_linops = NULL;
+	data->init = NULL;
+	data->iov = iovec_create(iov->N, iov->dims, iov->size);
+
+	if (NULL != init) {
+
+		float* init2 = md_alloc(iov->N, iov->dims, iov->size);
+		md_copy(iov->N, iov->dims, init2, init, iov->size);
+
+		data->init = init2;
+	}
+
+	if (NULL != prox_funs) {
+
+		data->prox_funs = *TYPE_ALLOC(const struct operator_p_s*[num_funs]);
+
+		for (unsigned int i = 0; i < num_funs; i++)
+			data->prox_funs[i] = operator_p_ref(prox_funs[i]);
+	}
+
+	if (NULL != prox_linops) {
+
+		data->prox_linops = *TYPE_ALLOC(const struct linop_s*[num_funs]);
+
+		for (unsigned int i = 0; i < num_funs; i++)
+			data->prox_linops[i] = linop_clone(prox_linops[i]);
+	}
+
+	return operator_create(iov->N, iov->dims, iov->N, iov->dims, CAST_UP(PTR_PASS(data)), itop_apply, itop_del);
+}
+
+
