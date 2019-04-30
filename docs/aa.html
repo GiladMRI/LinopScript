@@ -1,0 +1,354 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Linop script for BART</title><meta name="generator" content="MATLAB 9.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2019-04-04"><meta name="DC.source" content="LinopScript_Doc1.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>Linop script for BART</h1><!--introduction--><p>Extending BART with a scipt language for linear operators.</p><p>Facilitates applying BART to new problems: no need for compilation or going deeper into BART just for image-to-signal operator change.</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Available operators:</a></li><li><a href="#2">Example 1: standard sparse sampling linop script</a></li><li><a href="#3">Example 2: T2-shuffling, basic recon</a></li><li><a href="#4">Example 3: T2-shuffling, temporal trick</a></li><li><a href="#6">That's it.</a></li></ul></div><h2 id="1">Available operators:</h2><p>Currently only these (see bart('linopScript -h) for list):</p><pre>FFT/IFFT/FFTC/IFFTC &lt;FFT_FLAGS&gt;
+FMAC &lt;Which_file_no&gt; &lt;SQUASH_FLAGS&gt; : multiplies and then sums
+Transpose &lt;dim1&gt; &lt;dim2&gt; : transposes the dims
+
+https://archive.org/download/NotesOnAnarchism/NoamChomsky-NotesOnAnarchism.epub
+
+
+
+
+Print &lt;messageId&gt; : print messageId on frwrd/adjoint/normal calls
+ident - do nothing
+Samp &lt;Which_file_no&gt; : Sampling is multiplication by binary map - so forward=adjoint=normal</pre><h2 id="2">Example 1: standard sparse sampling linop script</h2><p>Standard sparse sampling reconstruction image-to-signal operator involves 3 steps:</br>Multiplying the image with the (possibly multi-map) coil sensitivity maps, and summing over the MAPS dimension.</br>Fourier transform over the spatial dimensions (RO, PE, ZPE : BART flag 7).</br>Multiplying by the sampling masks.</br>So, the script file is as follows (p3df.txt):</p><pre>File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+FMAC 1 16
+FFT 7
+FMAC 2 0</pre><h2 id="3">Example 2: T2-shuffling, basic recon</h2><p>T2-shuffling involves: A_for = @(a) P_for(T_for(F_for(S_for(a)))); </br>That is: </br>Applying sensitivity maps.</br>Fourier transform.</br>Temporal unfolding (components to time-points).</br>Multiplying by the sampling pattern.</br>So, the script file is as follows (t2shft1.txt):</p><pre>File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+File 3 is components: Phi
+FMAC 1 0     - this is applying sensitivity maps (file 1, no summation)
+FFT 3        - FT over the first 2 spatial dimensions (FLAG 3)
+FMAC 3 64    -  Temporal unfolding: matrix multiplication is done here
+                 by Hadamard multiplication and summation over dim 6 (flag 64)
+FMAC 2 0     - Applying temporal sampling mask</pre><p>To run that from MATLAB, let's prepare the stuff: (After running demo_t2shuffling_recon.m)</p><pre class="codeinput">kspP=permute(ksp,[1 2 5 3 6 4]);                <span class="comment">%   260   240       1     8     1    80</span>
+SensP=permute(sens,[1 2 4 3]);                  <span class="comment">%   260   240       1     8</span>
+PhiP=permute(Phi,[3 4 5 6 7 1 2]);              <span class="comment">%   1     1         1     1     1    80     4</span>
+masksP=permute(masks,[1 2 3 5 6 4]);            <span class="comment">%   260   240       1     1     1    80</span>
+
+WarmStartZeros=zeros([size(SensP,1) size(SensP,2) 1 1 1 1 K]);
+WarmStartZerosFN=[BaseFolder <span class="string">'T2ShflZ'</span>];
+writecfl(WarmStartZerosFN,WarmStartZeros);
+T2ShflScriptFN=[BaseFolder <span class="string">'t2shf1.txt'</span>];
+
+Rho=3000;
+Lambda=10;
+RecT2Shf1=bart([<span class="string">'picsS -m -b 10 -u '</span> num2str(Rho) <span class="string">' -R L:3:3:'</span> num2str(Lambda) <span class="string">' -W '</span> WarmStartZerosFN <span class="string">' '</span> T2ShflScriptFN],kspP,SensP,masksP,PhiP);
+RecT2Shf1=squeeze(RecT2Shf1);
+
+figure;subplot(2,1,1);imshow(abs(reshape(RecT2Shf1, size(RecT2Shf1,1), [])), []);title(<span class="string">'RecT2Shf1 components'</span>);
+subplot(2,1,2);imshow(angle(reshape(RecT2Shf1, size(RecT2Shf1,1), [])), []);
+</pre><pre class="codeoutput">Warm start: Starting with [260 240   1   1   1   1   4   1   1   1   1   1   1   1   1   1 ]
+main_picsS
+Reading files
+Reading /tmp/tp1dc73518_aa77_4286_8eb8_00b331958bdcin1: 260 240 1 8 1 80 1 1 1 1 1 1 1 1 1 1
+Reading /tmp/tp1dc73518_aa77_4286_8eb8_00b331958bdcin2: 260 240 1 8 1 1 1 1 1 1 1 1 1 1 1 1
+Reading /tmp/tp1dc73518_aa77_4286_8eb8_00b331958bdcin3: 260 240 1 1 1 80 1 1 1 1 1 1 1 1 1 1
+Reading /tmp/tp1dc73518_aa77_4286_8eb8_00b331958bdcin4: 1 1 1 1 1 80 4 1 1 1 1 1 1 1 1 1
+Finished reading files
+Warm start: CurDims:[260 240   1   1   1   1   4   1   1   1   1   1   1   1   1   1 ]
+CurDims:[260 240   1   1   1   1   4   1   1   1   1   1   1   1   1   1 ]
+# File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+# File 3 is components: Phi
+# PRINT 52
+Adding: FMAC with file #1 squash flag 0
+Adding: FFT with flag 3
+Adding: FMAC with file #3 squash flag 64
+Adding: FMAC with file #2 squash flag 0
+# PRINT 5
+
+Read forward script. dimsAfterF:[260 240   1   8   1  80   1   1   1   1   1   1   1   1   1   1 ]
+OK linop script reading
+Inverse scaling of the data: 15074.718750
+Preparing prox funcs
+lowrank regularization: 10.000000
+ADMM
+Preparing operator
+sense_recon_create
+sense_recon_create pattern
+Now applying
+itop_apply!!
+Now freeing
+Total Time: 38.897868
+Clearing files' memory
+Clearing /tmp/tp1dc73518_aa77_4286_8eb8_00b331958bdcin1
+Clearing /tmp/tp1dc73518_aa77_4286_8eb8_00b331958bdcin2
+Clearing /tmp/tp1dc73518_aa77_4286_8eb8_00b331958bdcin3
+Clearing /tmp/tp1dc73518_aa77_4286_8eb8_00b331958bdcin4
+Finished Clearing files' memory
+Size: 260  240    1    1    1    1    4
+</pre><img vspace="5" hspace="5" src="LinopScript_Doc1_01.png" alt=""> <h2 id="4">Example 3: T2-shuffling, temporal trick</h2><p>Following Tamir et al., the computation might be done completely in the components domains, without ever unfolding the full temporal resolution. In such a case, one would like to describe the normal operator directly. It is of the common form</p><p><img src="LinopScript_Doc1_eq00560262755012619302.png" alt="$$A_1A_2A_3MA_1^HA_2^HA_3^H$$"></p><p>where <img src="LinopScript_Doc1_eq16017731289141014471.png" alt="$M=XYZ$"> is an operator chain done only once.</p><p>(Toeplitz embedding for NUFFT takes similar form)</p><p>For the T2-shuffling case, preparing the central kernel trick:</p><pre class="codeinput">PT=sum(masks.*permute(Phi,[3 4 5 1 2]),6);
+TPT1=sum(PT.*permute(Phi',[3 4 5 2 6 1]),4);
+
+TPT1p=permute(TPT1,[1 2 3 5 6 4]);
+
+TPT1pBart=permute(TPT1p,[1 2 3 6 7 8 4 5]);     <span class="comment">%   260   240       1     1     1     1     4     4</span>
+ET=permute(eye(K),[3:8 1 2]);                   <span class="comment">%   1     1         1     1     1     1     4     4</span>
+</pre><p>Now, for the linop script, we define the "standard part" <img src="LinopScript_Doc1_eq08304132131232841820.png" alt="$A_1A_2A_3$"> in 1 file (t2shf2NF.txt):</p><pre># Forward part of Normal operator:
+# File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+# File 3 is components: Phi
+# File 4 is TPT, File 5 is ET
+FMAC 1 0         # This is S_for
+FFT 3            # This is F_for</pre><p>and the kernel of the normal operator, <img src="LinopScript_Doc1_eq00802513524912003067.png" alt="$M$">, in another file (t2shf2N.txt):</p><pre># File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+# File 3 is components: Phi
+# File 4 is TPT, File 5 is ET
+FMAC 4 64               # This is multiplication with TPT
+FMAC 5 128              # This is stable permute to the same size, strides</pre><p>And we run that using the -Q and -M options of picsS:</p><p>(still providing also the full forward operator, t2shft1.txt, just for the calculation of the adjoint on the k-space).</p><pre class="codeinput">T2ShflScriptFN_FPart=[BaseFolder <span class="string">'t2shf2NF.txt'</span>];
+T2ShflScriptFN_NPart=[BaseFolder <span class="string">'t2shf2N.txt'</span>];
+ScriptsPart=[<span class="string">' -W '</span> WarmStartZerosFN <span class="string">' -Q '</span> T2ShflScriptFN_FPart <span class="string">' -M '</span> T2ShflScriptFN_NPart <span class="string">' '</span> T2ShflScriptFN];
+RecT2Shf2=bart([<span class="string">'picsS -m -b 10 -u '</span> num2str(Rho) <span class="string">' -R L:3:3:'</span> num2str(Lambda) ScriptsPart],kspP,SensP,masksP,PhiP,TPT1pBart,ET);
+RecT2Shf2=squeeze(RecT2Shf2);
+
+figure;subplot(2,1,1);imshow(abs(reshape(RecT2Shf2, size(RecT2Shf2,1), [])), []);title(<span class="string">'RecT2Shf2 components'</span>);
+subplot(2,1,2);imshow(angle(reshape(RecT2Shf2, size(RecT2Shf2,1), [])), []);
+</pre><pre class="codeoutput">Warm start: Starting with [260 240   1   1   1   1   4   1   1   1   1   1   1   1   1   1 ]
+main_picsS
+Reading files
+Reading /tmp/tp3fba1a8d_6aee_4e71_bf8c_0f9836c9cc11in1: 260 240 1 8 1 80 1 1 1 1 1 1 1 1 1 1
+Reading /tmp/tp3fba1a8d_6aee_4e71_bf8c_0f9836c9cc11in2: 260 240 1 8 1 1 1 1 1 1 1 1 1 1 1 1
+Reading /tmp/tp3fba1a8d_6aee_4e71_bf8c_0f9836c9cc11in3: 260 240 1 1 1 80 1 1 1 1 1 1 1 1 1 1
+Reading /tmp/tp3fba1a8d_6aee_4e71_bf8c_0f9836c9cc11in4: 1 1 1 1 1 80 4 1 1 1 1 1 1 1 1 1
+Reading /tmp/tp3fba1a8d_6aee_4e71_bf8c_0f9836c9cc11in5: 260 240 1 1 1 1 4 4 1 1 1 1 1 1 1 1
+Reading /tmp/tp3fba1a8d_6aee_4e71_bf8c_0f9836c9cc11in6: 1 1 1 1 1 1 4 4 1 1 1 1 1 1 1 1
+Finished reading files
+Warm start: CurDims:[260 240   1   1   1   1   4   1   1   1   1   1   1   1   1   1 ]
+CurDims:[260 240   1   1   1   1   4   1   1   1   1   1   1   1   1   1 ]
+# File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+# File 3 is components: Phi
+# PRINT 52
+Adding: FMAC with file #1 squash flag 0
+Adding: FFT with flag 3
+Adding: FMAC with file #3 squash flag 64
+Adding: FMAC with file #2 squash flag 0
+# PRINT 5
+
+Read forward script. dimsAfterF:[260 240   1   8   1  80   1   1   1   1   1   1   1   1   1   1 ]
+# Forward part of Normal operator:
+# File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+# File 3 is components: Phi 
+# File 4 is TPT, File 5 is ET
+Adding: FMAC with file #1 squash flag 0
+Adding: FFT with flag 3
+
+# File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+# File 3 is components: Phi 
+# File 4 is TPT, File 5 is ET
+Adding: FMAC with file #4 squash flag 64
+Adding: FMAC with file #5 squash flag 128
+
+OK linop script reading
+Inverse scaling of the data: 15074.718750
+Preparing prox funcs
+lowrank regularization: 10.000000
+ADMM
+Preparing operator
+sense_recon_create
+sense_recon_create pattern
+Now applying
+itop_apply!!
+Now freeing
+Total Time: 26.761978
+Clearing files' memory
+Clearing /tmp/tp3fba1a8d_6aee_4e71_bf8c_0f9836c9cc11in1
+Clearing /tmp/tp3fba1a8d_6aee_4e71_bf8c_0f9836c9cc11in2
+Clearing /tmp/tp3fba1a8d_6aee_4e71_bf8c_0f9836c9cc11in3
+Clearing /tmp/tp3fba1a8d_6aee_4e71_bf8c_0f9836c9cc11in4
+Clearing /tmp/tp3fba1a8d_6aee_4e71_bf8c_0f9836c9cc11in5
+Clearing /tmp/tp3fba1a8d_6aee_4e71_bf8c_0f9836c9cc11in6
+Finished Clearing files' memory
+Size: 260  240    1    1    1    1    4
+</pre><img vspace="5" hspace="5" src="LinopScript_Doc1_02.png" alt=""> <h2 id="6">That's it.</h2><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2018a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% Linop script for BART
+% Extending BART with a scipt language for linear operators.
+%
+% Facilitates applying BART to new problems: no need for compilation or
+% going deeper into BART just for image-to-signal operator change.
+%% Available operators: 
+% Currently only these (see bart('linopScript -h) for list):
+%
+%  FFT/IFFT/FFTC/IFFTC <FFT_FLAGS>
+%  FMAC <Which_file_no> <SQUASH_FLAGS> : multiplies and then sums
+%  Transpose <dim1> <dim2> : transposes the dims
+%  Print <messageId> : print messageId on frwrd/adjoint/normal calls
+%  ident - do nothing
+%  Samp <Which_file_no> : Sampling is multiplication by binary map - so forward=adjoint=normal
+%% Example 1: standard sparse sampling linop script
+% Standard sparse sampling reconstruction image-to-signal operator
+% involves 3 steps:
+% Multiplying the image with the (possibly multi-map) coil sensitivity
+% maps, and summing over the MAPS dimension.
+% Fourier transform over the spatial dimensions (RO, PE, ZPE : BART flag 7).
+% Multiplying by the sampling masks.
+% So, the script file is as follows (p3df.txt):
+%
+%  File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+%  FMAC 1 16
+%  FFT 7
+%  FMAC 2 0
+%
+% That's it.
+%% Example 2: T2-shuffling, basic recon
+% T2-shuffling involves:
+% A_for = @(a) P_for(T_for(F_for(S_for(a))));
+% That is:
+% Applying sensitivity maps.
+% Fourier transform.
+% Temporal unfolding (components to time-points).
+% Multiplying by the sampling pattern.
+% So, the script file is as follows (t2shft1.txt):
+%
+%  File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+%  File 3 is components: Phi
+%  FMAC 1 0     - this is applying sensitivity maps (file 1, no summation)
+%  FFT 3        - FT over the first 2 spatial dimensions (FLAG 3)
+%  FMAC 3 64    -  Temporal unfolding: matrix multiplication is done here
+%                   by Hadamard multiplication and summation over dim 6 (flag 64)
+%  FMAC 2 0     - Applying temporal sampling mask
+%
+% To run that from MATLAB, let's prepare the stuff:
+% (After running demo_t2shuffling_recon.m)
+kspP=permute(ksp,[1 2 5 3 6 4]);                %   260   240       1     8     1    80
+SensP=permute(sens,[1 2 4 3]);                  %   260   240       1     8
+PhiP=permute(Phi,[3 4 5 6 7 1 2]);              %   1     1         1     1     1    80     4
+masksP=permute(masks,[1 2 3 5 6 4]);            %   260   240       1     1     1    80
+
+WarmStartZeros=zeros([size(SensP,1) size(SensP,2) 1 1 1 1 K]);
+WarmStartZerosFN=[BaseFolder 'T2ShflZ'];
+writecfl(WarmStartZerosFN,WarmStartZeros);
+T2ShflScriptFN=[BaseFolder 't2shf1.txt'];
+
+Rho=3000;
+Lambda=10;
+RecT2Shf1=bart(['picsS -m -b 10 -u ' num2str(Rho) ' -R L:3:3:' num2str(Lambda) ' -W ' WarmStartZerosFN ' ' T2ShflScriptFN],kspP,SensP,masksP,PhiP);
+RecT2Shf1=squeeze(RecT2Shf1);
+
+figure;subplot(2,1,1);imshow(abs(reshape(RecT2Shf1, size(RecT2Shf1,1), [])), []);title('RecT2Shf1 components');
+subplot(2,1,2);imshow(angle(reshape(RecT2Shf1, size(RecT2Shf1,1), [])), []);
+%% Example 3: T2-shuffling, temporal trick
+% Following Tamir et al., the computation might be done completely in
+% the components domains, without ever unfolding the full temporal
+% resolution. 
+% In such a case, one would like to describe the normal operator
+% directly. It is of the common form
+%
+% $$A_1A_2A_3MA_1^HA_2^HA_3^H$$
+%
+% where $M=XYZ$ is an operator chain done only once.
+%
+% (Toeplitz embedding for NUFFT takes similar form)
+%
+% For the T2-shuffling case, preparing the central kernel trick:
+%
+
+PT=sum(masks.*permute(Phi,[3 4 5 1 2]),6);
+TPT1=sum(PT.*permute(Phi',[3 4 5 2 6 1]),4);
+
+TPT1p=permute(TPT1,[1 2 3 5 6 4]);
+
+TPT1pBart=permute(TPT1p,[1 2 3 6 7 8 4 5]);     %   260   240       1     1     1     1     4     4
+ET=permute(eye(K),[3:8 1 2]);                   %   1     1         1     1     1     1     4     4
+
+%%
+% Now, for the linop script, we define the "standard part" $A_1A_2A_3$ in 1 file
+% (t2shf2NF.txt):
+%
+%  # Forward part of Normal operator:
+%  # File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+%  # File 3 is components: Phi 
+%  # File 4 is TPT, File 5 is ET
+%  FMAC 1 0         # This is S_for
+%  FFT 3            # This is F_for
+%
+% and the kernel of the normal operator, $M$, in another file
+% (t2shf2N.txt):
+%
+%  # File 0 is k-space data, file 1 is sensitivity maps, 2 is sampling pattern
+%  # File 3 is components: Phi 
+%  # File 4 is TPT, File 5 is ET
+%  FMAC 4 64               # This is multiplication with TPT
+%  FMAC 5 128              # This is stable permute to the same size, strides
+%
+% And we run that using the -Q and -M options of picsS:
+%
+% (still providing also the full forward operator, t2shft1.txt, just for
+% the calculation of the adjoint on the k-space).
+%
+
+T2ShflScriptFN_FPart=[BaseFolder 't2shf2NF.txt'];
+T2ShflScriptFN_NPart=[BaseFolder 't2shf2N.txt'];
+ScriptsPart=[' -W ' WarmStartZerosFN ' -Q ' T2ShflScriptFN_FPart ' -M ' T2ShflScriptFN_NPart ' ' T2ShflScriptFN];
+RecT2Shf2=bart(['picsS -m -b 10 -u ' num2str(Rho) ' -R L:3:3:' num2str(Lambda) ScriptsPart],kspP,SensP,masksP,PhiP,TPT1pBart,ET);
+RecT2Shf2=squeeze(RecT2Shf2);
+
+figure;subplot(2,1,1);imshow(abs(reshape(RecT2Shf2, size(RecT2Shf2,1), [])), []);title('RecT2Shf2 components');
+subplot(2,1,2);imshow(angle(reshape(RecT2Shf2, size(RecT2Shf2,1), [])), []);
+
+%% That's it.
+##### SOURCE END #####
+--></body></html>
