@@ -20,10 +20,10 @@ Here:
 https://giladddd.github.io/LinopScript/rrsg.html
 
 # linopScript command to test operator
-Usage: linopScript [-N] [-A] [-j d] <OpScriptTxt> <StartDims> <input> [<file0> [<file> [<file2> [...]]]] <output>\
+Usage: linopScript \[-N\] \[-A\] \[-j d\] \<OpScriptTxt\> \<StartDims\> \<input\> \[\<file0\> \[\<file\> \[\<file2\> \[...\]\]\]\] \<output\>\
 
 Apply linop from script:\
-linopScript <OpScriptTxt> <StartDims> <input> [<file0> [<file> [<file2> [...]]]] <output>\
+linopScript \<OpScriptTxt\> \<StartDims\> \<input\> \[\<file0\> \[\<file\> \[\<file2\> \[...\]\]\]\] \<output\>\
 -----------------------------------------\
 Apply operator script from OpScriptTxt on the input, and save in output\
 Uses other files if mentioned\
