@@ -28,6 +28,8 @@ struct linop_s;
 long * getFdims(long i);
 complex float* getDataFile(long i);
 
+const struct linop_s* getLinopScriptFromFile(const char *FN, long CurDims[]);
+
 #include "misc/cppwrap.h"
 
 #endif // __LINOP_H
