@@ -206,7 +206,7 @@ RecT2Shf2=bart(['picsS -m -b 10 -u ' num2str(Rho) ' -R L:3:3:' num2str(Lambda) '
 RecT2Shf2=squeeze(RecT2Shf2);
 
 figure;subplot(2,1,1);imshow(abs(reshape(RecT2Shf2, size(RecT2Shf2,1), [])), []);title('RecT2Shf2 components');
-subplot(2,1,2);imshow(angle(reshape(RecT2Shf2, size(RecT2Shf2,1), [])), []);.
+subplot(2,1,2);imshow(angle(reshape(RecT2Shf2, size(RecT2Shf2,1), [])), []);
 %  This script file defines the normal operator specificaly (the lines below
 % the NORMAL title):
 %  --- nuftScriptN.txt  -----
