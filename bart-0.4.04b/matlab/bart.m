@@ -19,16 +19,17 @@ function [varargout] = bart(cmd, varargin)
 			bart_path = '/usr/local/bin';
 		elseif exist('/usr/bin/bart', 'file')
 			bart_path = '/usr/bin';
-        else    
-            % Try to execute bart inside wsl, if it works, then it returns
-            % status 0
-            [bartstatus, ~] = system('wsl bart version -V');
-            if bartstatus==0
-                bart_path = '/usr/bin';
-                isWSL = true;
-            else
-                error('Environment variable TOOLBOX_PATH is not set.');
-            end
+		else    
+		    % Try to execute bart inside wsl, if it works, then it returns
+		    % status 0
+		    [bartstatus, ~] = system('wsl bart version -V');
+		    if bartstatus==0
+			bart_path = '/usr/bin';
+			isWSL = true;
+		    else
+			error('Environment variable TOOLBOX_PATH is not set.');
+		    end
+		end
 	end
 
 	% clear the LD_LIBRARY_PATH environment variable (to work around
