@@ -1,0 +1,679 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>LinopScript_TGV_Try3</title><meta name="generator" content="MATLAB 9.5"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2019-07-03"><meta name="DC.source" content="LinopScript_TGV_Try3.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#2">TGV denoising</a></li><li><a href="#3">First regulatizer linop is choosing u,v</a></li><li><a href="#4">2nd regularizer is on dI/dx-u, dI/dy-v</a></li><li><a href="#5">In one multi-linop file</a></li><li><a href="#6">TGV denoising example</a></li><li><a href="#7">Resulting denoised images</a></li><li><a href="#8">Comparison</a></li></ul></div><pre class="codeinput">setenv(<span class="string">'TOOLBOX_PATH'</span>,<span class="string">'/autofs/space/daisy_002/users/Gilad/LSBart/bart-toUpload'</span>)
+</pre><h2 id="2">TGV denoising</h2><p>This is an example of using a multi-linop script for image reconstruction with tailored image-to-signal operator and tailored image to constrain operators.</p><p>Following "Second Order Total Generalized Variation (TGV) for MRI", Knoll et al, MRM 2011.</p><p>2D TGV2 can be formulated as follows: The "image domain" will be extended (along a dimension denoted "TGV") to include 2 more variables, except the image estimate I, also u,and v, the variables controlling if to locally use first or second derivative. So finally they'll be similar to x,y derivative of I.</p><p>TGV aims to optimize more or less the following function: <img src="LinopScript_TGV_Try3_eq02737845519326110510.png" alt="$$|A*I-signal| + | \nabla(I)-\{u,v\}|_1+| \nabla\{u,v\}|_1 $$"></p><p>For simplicity this demonstrated image denoising. So, we'll have 3 linops:</p><p>1. the "image-to-signal operator is just choosing I from {I,u,v}, we do that by multiplying with [1 0 0] and summing (fmac).78</p><p>2.  <img src="LinopScript_TGV_Try3_eq09147123857137677949.png" alt="$$\nabla(I)-\{u,v\} $$"></p><p>3.  <img src="LinopScript_TGV_Try3_eq08867097647802398516.png" alt="$$\nabla(\{u,v\}) $$"></p><pre class="codeinput">N=128;
+HalfN=N/2;
+Signal=phantom(N);
+Img=Signal;
+Img(:,:,1,1,1,3)=0;
+<span class="comment">% TGV image-to-signal</span>
+ChooseFirst=[1;0;0];
+ChooseFirstP=permute(ChooseFirst,[6 5 4 3 2 1]);
+TGV_Denoise_MainLinop_FN=<span class="string">'TGV_Denoise_Main.txt'</span>;
+TGV_Main_Ops={<span class="string">'fmac 0 32'</span>};
+WriteLinopToFile(TGV_Denoise_MainLinop_FN,TGV_Main_Ops);
+ChooseFirstRes=bart([<span class="string">'linopScript '</span> TGV_Denoise_MainLinop_FN],FillOnesTo16(size(Img)),Img,ChooseFirstP);
+</pre><pre class="codeoutput">main_linopScript
+Reading files
+Finished reading files
+input dims: /tmp/tpdffd9923_1d98_4956_92dd_2d95c15e9787in2
+XXXXXXXXXXXXXX
+inputDims_dims: [  1  16   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+input_dims: [128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+inputF_dims: [128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+Reading script:
+getLinopScriptFromFile start
+Linop 0: Adding: FMAC with file #0 squash flag 32
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile end
+Applying the operator
+From linop out:[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+Saving output
+inputF_dims: [128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+Clearing files' memory
+Finished Clearing files' memory
+Size: 128  128
+</pre><h2 id="3">First regulatizer linop is choosing u,v</h2><pre>and applying symmetric differetiation,
+i.e. du/dx, dv/dy, (du/dy+dv/dx)/2</pre><pre class="codeinput">ChooseLastTwo=[0 0; 1 0; 0 1];
+ChooseLastTwoP=permute(ChooseLastTwo,[7 6 5 4 3 1 2]);
+Img(:,:,:,:,:,2)=checkerboard(N/8);
+Img(:,:,:,:,:,3)=checkerboard(N/8)+1;
+TGV_Denoise_uvLinop_FN=<span class="string">'TGV_Denoise_uv.txt'</span>;
+<span class="comment">% after choosing 2,3 is X   Y     1     1     1     1     2</span>
+<span class="comment">% After grad we're X Y 1 1 1 1 2 ... 2</span>
+<span class="comment">% Multiply that by [1 0.5; 0.5 1]</span>
+SymDiffWeight=[1 0.5; 0.5 1];
+SymDiffWeightP=permute(SymDiffWeight,[8 7 6 5 4 3 1 16 15 14 13 12 11 10 9 2]);
+TGV_uv_Ops={<span class="string">'fmac 1 32'</span>,<span class="string">'grad 3'</span>,<span class="string">'fmac 2 0'</span>};
+WriteLinopToFile(TGV_Denoise_uvLinop_FN,TGV_uv_Ops);
+uvLinopRes=bart([<span class="string">'linopScript '</span> TGV_Denoise_uvLinop_FN],FillOnesTo16(size(Img)),Img,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP);
+fgmontage(uvLinopRes);
+</pre><pre class="codeoutput">main_linopScript
+Reading files
+Finished reading files
+input dims: /tmp/tpd2791925_14ed_4e21_b5d3_b0038d4a01fein2
+XXXXXXXXXXXXXX
+inputDims_dims: [  1  16   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+input_dims: [128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+inputF_dims: [128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+Reading script:
+getLinopScriptFromFile start
+Linop 0: Adding: FMAC with file #1 squash flag 32
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   3   2   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   1 ]
+Linop 1: Adding: grad with flag 3
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+Linop 2: Adding: FMAC with file #2 squash flag 0
+[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+[  1   1   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+getLinopScriptFromFile end
+Applying the operator
+From linop out:[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+Saving output
+inputF_dims: [128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+Clearing files' memory
+Finished Clearing files' memory
+Size: 128  128    1    1    1    1    2    1    1    1    1    1    1    1    1    2
+</pre><img vspace="5" hspace="5" src="LinopScript_TGV_Try3_01.png" alt=""> <h2 id="4">2nd regularizer is on dI/dx-u, dI/dy-v</h2><p>we work as follows:</p><p>Increase [I,u,v] to [I 2I; u 2u; v 2v], Over a new dim AUX (sized 2)</p><p>diff along X,Y, AUX. So we're left with</p><p>[X Y 1 1 1 TGV AUX 1 1 1 1 1 1 1 1 GRAD], GRAD of size 3</p><p>looking only at TGV,GRAD dims, we have: (? = not important)</p><p>M= [dI/dx dI/dy    ?                    -&gt; GRAD dim</p><pre>     ?     ?      du/dAUX=-u            rows:TGV dim</pre><pre>     ?     ?      dv/dAUX=-v    ]</pre><p>On the AUX dim we'll have [-1, 1] multiplications of this matrix.</p><p>From this matrix we'll choose dI/dx-u, dI/dx-v, into AUX2 (dim 8) to</p><p>[X Y 1 1 1 1 1 AUX2], where AUX2 contains dI/dx-u, dI/dy-v as needed</p><pre class="codeinput">AUX=[1;2];
+AUXP=permute(AUX,[7 6 5 4 3 2 1]);
+clear <span class="string">ChooseFromM</span>
+ChooseFromM(:,:,1,2)=[1 0 0; 0 0 1; 0 0 0];
+ChooseFromM(:,:,2,2)=[0 1 0; 0 0 0; 0 0 1];
+ChooseFromMP=permute(ChooseFromM,[9 8 7 6 5 1 4 3 10 11 12 13 14 15 16 2]); <span class="comment">% 2^15+2^5+2^6 =32864</span>
+TGV_Denoise_dIuvLinop_FN=<span class="string">'TGV_Denoise_dIuv.txt'</span>;
+TGV_dIuv_Ops={<span class="string">'fmac 3 0'</span>,<span class="string">'grad 67'</span>,<span class="string">'fmac 4 32864'</span>};
+WriteLinopToFile(TGV_Denoise_dIuvLinop_FN,TGV_dIuv_Ops);
+dIuvLinopRes=bart([<span class="string">'linopScript '</span> TGV_Denoise_dIuvLinop_FN],FillOnesTo16(size(Img)),Img,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP,AUXP,ChooseFromMP);
+fgmontage(dIuvLinopRes);
+</pre><pre class="codeoutput">main_linopScript
+Reading files
+Finished reading files
+input dims: /tmp/tp9d15b724_db53_4f95_9352_d97cc7b1f3f9in2
+XXXXXXXXXXXXXX
+inputDims_dims: [  1  16   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+input_dims: [128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+inputF_dims: [128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+Reading script:
+getLinopScriptFromFile start
+Linop 0: Adding: FMAC with file #3 squash flag 0
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   1   2   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   3   2   1   1   1   1   1   1   1   1   1 ]
+Linop 1: Adding: grad with flag 67
+OutDims: [128 128   1   1   1   3   2   1   1   1   1   1   1   1   1   3 ]
+Linop 2: Adding: FMAC with file #4 squash flag 32864
+[128 128   1   1   1   3   2   1   1   1   1   1   1   1   1   3 ]
+[  1   1   1   1   1   3   2   2   1   1   1   1   1   1   1   3 ]
+OutDims: [128 128   1   1   1   1   1   2   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile end
+Applying the operator
+From linop out:[128 128   1   1   1   1   1   2   1   1   1   1   1   1   1   1 ]
+Saving output
+inputF_dims: [128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+Clearing files' memory
+Finished Clearing files' memory
+Size: 128  128    1    1    1    1    1    2
+</pre><img vspace="5" hspace="5" src="LinopScript_TGV_Try3_02.png" alt=""> <h2 id="5">In one multi-linop file</h2><p>Here we create a multi-linop file, and apply each of the linops on the input Img, by calling linopScript -L</p><pre class="codeinput">TGV_Denoise_Linops_FN=<span class="string">'TGV_Denoise_linops.txt'</span>;
+WriteLinopToFile(TGV_Denoise_Linops_FN,{TGV_Main_Ops,TGV_uv_Ops,TGV_dIuv_Ops });
+
+V1=bart([<span class="string">'linopScript -L 0 '</span> TGV_Denoise_Linops_FN],FillOnesTo16(size(Img)),Img,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP,AUXP,ChooseFromMP);
+V2=bart([<span class="string">'linopScript -L 1 '</span> TGV_Denoise_Linops_FN],FillOnesTo16(size(V1)),V1,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP,AUXP,ChooseFromMP);
+V3=bart([<span class="string">'linopScript -L 2 '</span> TGV_Denoise_Linops_FN],FillOnesTo16(size(V2)),V2,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP,AUXP,ChooseFromMP);
+
+size(V1)
+size(V2)
+size(V3)
+</pre><pre class="codeoutput">main_linopScript
+Reading files
+Finished reading files
+input dims: /tmp/tp7fb49bb5_d860_47d2_9bbb_b1c6a81c3aa2in2
+XXXXXXXXXXXXXX
+inputDims_dims: [  1  16   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+input_dims: [128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+inputF_dims: [128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+Reading script:
+getLinopScriptFromFile start
+Linop 0: Adding: FMAC with file #0 squash flag 32
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+---------
+Moving to next linop
+----------------
+Linop 1: Adding: FMAC with file #1 squash flag 32
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   3   2   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   1 ]
+Linop 2: Adding: grad with flag 3
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+Linop 3: Adding: FMAC with file #2 squash flag 0
+[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+[  1   1   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+---------
+Moving to next linop
+----------------
+Linop 4: Adding: FMAC with file #3 squash flag 0
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   1   2   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   3   2   1   1   1   1   1   1   1   1   1 ]
+Linop 5: Adding: grad with flag 67
+OutDims: [128 128   1   1   1   3   2   1   1   1   1   1   1   1   1   3 ]
+Linop 6: Adding: FMAC with file #4 squash flag 32864
+[128 128   1   1   1   3   2   1   1   1   1   1   1   1   1   3 ]
+[  1   1   1   1   1   3   2   2   1   1   1   1   1   1   1   3 ]
+OutDims: [128 128   1   1   1   1   1   2   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile end
+Applying the operator
+From linop out:[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+Saving output
+inputF_dims: [128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+Clearing files' memory
+Finished Clearing files' memory
+Size: 128  128
+main_linopScript
+Reading files
+Finished reading files
+input dims: /tmp/tpebb64f91_2eea_4f1c_af37_1482dc08ba3ein2
+XXXXXXXXXXXXXX
+inputDims_dims: [  1  16   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+input_dims: [128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+inputF_dims: [128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+Reading script:
+getLinopScriptFromFile start
+Linop 0: Adding: FMAC with file #0 squash flag 32
+[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+---------
+Moving to next linop
+----------------
+Linop 1: Adding: FMAC with file #1 squash flag 32
+[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   3   2   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   1 ]
+Linop 2: Adding: grad with flag 3
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+Linop 3: Adding: FMAC with file #2 squash flag 0
+[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+[  1   1   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+---------
+Moving to next linop
+----------------
+Linop 4: Adding: FMAC with file #3 squash flag 0
+[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   1   2   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   1 ]
+Linop 5: Adding: grad with flag 67
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   3 ]
+Linop 6: Adding: FMAC with file #4 squash flag 32864
+[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   3 ]
+[  1   1   1   1   1   3   2   2   1   1   1   1   1   1   1   3 ]
+OutDims: [128 128   1   1   1   1   1   2   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile end
+Applying the operator
+From linop out:[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+Saving output
+inputF_dims: [128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+Clearing files' memory
+Finished Clearing files' memory
+Size: 128  128    1    1    1    1    2    1    1    1    1    1    1    1    1    2
+main_linopScript
+Reading files
+Finished reading files
+input dims: /tmp/tp36c71412_da39_4bff_907d_696747e3cf45in2
+XXXXXXXXXXXXXX
+inputDims_dims: [  1  16   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+input_dims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+inputF_dims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+Reading script:
+getLinopScriptFromFile start
+Linop 0: Adding: FMAC with file #0 squash flag 32
+[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+[  1   1   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+---------
+Moving to next linop
+----------------
+Linop 1: Adding: FMAC with file #1 squash flag 32
+[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+[  1   1   1   1   1   3   2   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+Linop 2: Adding: grad with flag 3
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+Linop 3: Adding: FMAC with file #2 squash flag 0
+[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+[  1   1   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+---------
+Moving to next linop
+----------------
+Linop 4: Adding: FMAC with file #3 squash flag 0
+[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+[  1   1   1   1   1   1   2   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+Linop 5: Adding: grad with flag 67
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   3 ]
+Linop 6: Adding: FMAC with file #4 squash flag 32864
+[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   3 ]
+[  1   1   1   1   1   3   2   2   1   1   1   1   1   1   1   3 ]
+OutDims: [128 128   1   1   1   1   1   2   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile end
+Applying the operator
+From linop out:[128 128   1   1   1   1   1   2   1   1   1   1   1   1   1   1 ]
+Saving output
+inputF_dims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+Clearing files' memory
+Finished Clearing files' memory
+Size: 128  128    1    1    1    1    1    2
+
+ans =
+
+   128   128
+
+
+ans =
+
+  Columns 1 through 13
+
+   128   128     1     1     1     1     2     1     1     1     1     1     1
+
+  Columns 14 through 16
+
+     1     1     2
+
+
+ans =
+
+   128   128     1     1     1     1     1     2
+
+</pre><h2 id="6">TGV denoising example</h2><p>Now we call the parallel-imaging compressed-sensing recon with linopScript by calling picsS, with the multi-linop Script file. The first linop will be used as image-to-signal operator, and the rest will used for the regularizers, by their order. So, the 1st additional linop will be used for the first regularized defined in the picsS -R part.</p><p>We follow the authors' suggestion and set the regularization for the first term to be double that of the second.</p><pre class="codeinput">[X1 Y1]=meshgrid(1:N,1:N);
+[X2 Y2]=meshgrid(1:2:N,1:2:N);
+TGVexample=X1;
+TGVexample((N/4)+(1:HalfN),(N/4)+(1:HalfN))=fliplr(X2);
+
+Noised=TGVexample+randn(N)*10;
+
+IdentitiyFN=<span class="string">'Identity.txt'</span>;
+WriteLinopToFile(IdentitiyFN,<span class="string">'ident'</span>);
+
+DenoisedTV=bart([<span class="string">'picsS -R T:3:3:4 '</span> IdentitiyFN],FillOnesTo16(size(Noised)),Noised);
+DenoisedTVx=bart([<span class="string">'picsS -R T:3:3:8 '</span> IdentitiyFN],FillOnesTo16(size(Noised)),Noised);
+
+DenoisedTGV=bart([<span class="string">'picsS -m -R 1:0:2 -R 1:131:1 '</span> TGV_Denoise_Linops_FN],FillOnesTo16(size(Img)),Noised,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP,AUXP,ChooseFromMP);
+DenoisedTGVx=bart([<span class="string">'picsS -m -R 1:0:4 -R 1:131:2 '</span> TGV_Denoise_Linops_FN],FillOnesTo16(size(Img)),Noised,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP,AUXP,ChooseFromMP);
+</pre><pre class="codeoutput">main_picsS
+Reading files
+Finished reading files
+CurDims:[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile start
+Linop 0: Adding: identity: do nothing
+OutDims: [128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile end
+Read forward script. dimsAfterF:[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+OK linop script reading
+img_dims:[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+Inverse scaling of the data: 512.049255
+Opening output file /tmp/tpae17253d_ad39_4ad4_9e82_96e477216abcin1
+[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+Opening output file OK
+Preparing prox funcs
+TV regularization: 4.000000
+ADMM
+Now applying
+Now freeing
+Total Time: 0.037532
+Clearing files' memory
+Finished Clearing files' memory
+Size: 128  128
+main_picsS
+Reading files
+Finished reading files
+CurDims:[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile start
+Linop 0: Adding: identity: do nothing
+OutDims: [128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile end
+Read forward script. dimsAfterF:[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+OK linop script reading
+img_dims:[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+Inverse scaling of the data: 512.049255
+Opening output file /tmp/tp279a0c11_6ae3_4932_8fb9_80ce78d6d8f8in1
+[128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+Opening output file OK
+Preparing prox funcs
+TV regularization: 8.000000
+ADMM
+Now applying
+Now freeing
+Total Time: 0.037085
+Clearing files' memory
+Finished Clearing files' memory
+Size: 128  128
+main_picsS
+Reading files
+Finished reading files
+CurDims:[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile start
+Linop 0: Adding: FMAC with file #0 squash flag 32
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+---------
+Moving to next linop
+----------------
+Linop 1: Adding: FMAC with file #1 squash flag 32
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   3   2   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   1 ]
+Linop 2: Adding: grad with flag 3
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+Linop 3: Adding: FMAC with file #2 squash flag 0
+[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+[  1   1   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+---------
+Moving to next linop
+----------------
+Linop 4: Adding: FMAC with file #3 squash flag 0
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   1   2   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   3   2   1   1   1   1   1   1   1   1   1 ]
+Linop 5: Adding: grad with flag 67
+OutDims: [128 128   1   1   1   3   2   1   1   1   1   1   1   1   1   3 ]
+Linop 6: Adding: FMAC with file #4 squash flag 32864
+[128 128   1   1   1   3   2   1   1   1   1   1   1   1   1   3 ]
+[  1   1   1   1   1   3   2   2   1   1   1   1   1   1   1   3 ]
+OutDims: [128 128   1   1   1   1   1   2   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile end
+Read forward script. dimsAfterF:[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+OK linop script reading
+img_dims:[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+Inverse scaling of the data: 512.049255
+Opening output file /tmp/tpc0a40678_ec12_47be_8228_0150afe82279in1
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+Opening output file OK
+Preparing prox funcs
+L1 regularization (for linopScript): 2.000000
+L1 regularization (for linopScript): 1.000000
+ADMM
+Now applying
+Now freeing
+Total Time: 1.103359
+Clearing files' memory
+Finished Clearing files' memory
+Size: 128  128    1    1    1    3
+main_picsS
+Reading files
+Finished reading files
+CurDims:[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile start
+Linop 0: Adding: FMAC with file #0 squash flag 32
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   1   1   1   1   1   1   1   1   1   1 ]
+---------
+Moving to next linop
+----------------
+Linop 1: Adding: FMAC with file #1 squash flag 32
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   3   2   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   1 ]
+Linop 2: Adding: grad with flag 3
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+Linop 3: Adding: FMAC with file #2 squash flag 0
+[128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+[  1   1   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+OutDims: [128 128   1   1   1   1   2   1   1   1   1   1   1   1   1   2 ]
+---------
+Moving to next linop
+----------------
+Linop 4: Adding: FMAC with file #3 squash flag 0
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+[  1   1   1   1   1   1   2   1   1   1   1   1   1   1   1   1 ]
+OutDims: [128 128   1   1   1   3   2   1   1   1   1   1   1   1   1   1 ]
+Linop 5: Adding: grad with flag 67
+OutDims: [128 128   1   1   1   3   2   1   1   1   1   1   1   1   1   3 ]
+Linop 6: Adding: FMAC with file #4 squash flag 32864
+[128 128   1   1   1   3   2   1   1   1   1   1   1   1   1   3 ]
+[  1   1   1   1   1   3   2   2   1   1   1   1   1   1   1   3 ]
+OutDims: [128 128   1   1   1   1   1   2   1   1   1   1   1   1   1   1 ]
+getLinopScriptFromFile end
+Read forward script. dimsAfterF:[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+OK linop script reading
+img_dims:[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+Inverse scaling of the data: 512.049255
+Opening output file /tmp/tpa5cc7d7e_9b68_483c_82ca_436c272844e6in1
+[128 128   1   1   1   3   1   1   1   1   1   1   1   1   1   1 ]
+Opening output file OK
+Preparing prox funcs
+L1 regularization (for linopScript): 4.000000
+L1 regularization (for linopScript): 2.000000
+ADMM
+Now applying
+Now freeing
+Total Time: 1.071636
+Clearing files' memory
+Finished Clearing files' memory
+Size: 128  128    1    1    1    3
+</pre><h2 id="7">Resulting denoised images</h2><pre class="codeinput">fgmontage(cat(3,DenoisedTV,DenoisedTGV(:,:,1)));title(<span class="string">'TV                                                   TGV'</span>,<span class="string">'FontSize'</span>,16);
+</pre><img vspace="5" hspace="5" src="LinopScript_TGV_Try3_03.png" alt=""> <h2 id="8">Comparison</h2><p>while both TV and TGV show similar smoothness, the TGV preserves the edges better. So maybe some of the math used here was right.</p><pre class="codeinput">figure;
+plot(squeeze(DenoisedTGV(HalfN,:,1)),<span class="string">'k'</span>);hold <span class="string">on</span>;
+plot(squeeze(DenoisedTGVx(HalfN,:,1)),<span class="string">'r'</span>);hold <span class="string">on</span>;
+plot(squeeze(DenoisedTV(HalfN,:,1)),<span class="string">'k:'</span>,<span class="string">'LineWidth'</span>,2);hold <span class="string">on</span>;
+plot(squeeze(DenoisedTVx(HalfN,:,1)),<span class="string">'r:'</span>,<span class="string">'LineWidth'</span>,2);hold <span class="string">on</span>;
+legend({<span class="string">'TGV weak'</span>,<span class="string">'TGV strong'</span>,<span class="string">'TV weak'</span>,<span class="string">'TV strong'</span>},<span class="string">'Location'</span>,<span class="string">'Best'</span>)
+</pre><img vspace="5" hspace="5" src="LinopScript_TGV_Try3_04.png" alt=""> <p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2018b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+setenv('TOOLBOX_PATH','/autofs/space/daisy_002/users/Gilad/LSBart/bart-toUpload')
+%% TGV denoising
+% This is an example of using a multi-linop script for image reconstruction
+% with tailored image-to-signal operator and tailored image to constrain
+% operators.
+%
+% Following "Second Order Total Generalized Variation (TGV) for MRI", Knoll
+% et al, MRM 2011.
+%
+% 2D TGV2 can be formulated as follows:
+% The "image domain" will be extended (along a dimension denoted "TGV") to include 2 more variables, except
+% the image estimate I, also u,and v, the variables controlling if to
+% locally use first or second derivative. So finally they'll be similar to x,y derivative of I.
+%
+% TGV aims to optimize more or less the following function: $$|A*I-signal| + | \nabla(I)-\{u,v\}|_1+| \nabla\{u,v\}|_1 $$
+%
+% For simplicity this demonstrated image denoising.
+% So, we'll have 3 linops:
+% 
+% 1. the "image-to-signal operator is just choosing I from {I,u,v}, we do that by
+% multiplying with [1 0 0] and summing (fmac).78
+%
+% 2.  $$\nabla(I)-\{u,v\} $$
+%
+% 3.  $$\nabla(\{u,v\}) $$
+%
+N=128;
+HalfN=N/2;
+Signal=phantom(N);
+Img=Signal;
+Img(:,:,1,1,1,3)=0;
+% TGV image-to-signal 
+ChooseFirst=[1;0;0];
+ChooseFirstP=permute(ChooseFirst,[6 5 4 3 2 1]);
+TGV_Denoise_MainLinop_FN='TGV_Denoise_Main.txt';
+TGV_Main_Ops={'fmac 0 32'};
+WriteLinopToFile(TGV_Denoise_MainLinop_FN,TGV_Main_Ops);
+ChooseFirstRes=bart(['linopScript ' TGV_Denoise_MainLinop_FN],FillOnesTo16(size(Img)),Img,ChooseFirstP);
+%% First regulatizer linop is choosing u,v
+%  and applying symmetric differetiation,
+% i.e. du/dx, dv/dy, (du/dy+dv/dx)/2
+ChooseLastTwo=[0 0; 1 0; 0 1];
+ChooseLastTwoP=permute(ChooseLastTwo,[7 6 5 4 3 1 2]);
+Img(:,:,:,:,:,2)=checkerboard(N/8);
+Img(:,:,:,:,:,3)=checkerboard(N/8)+1;
+TGV_Denoise_uvLinop_FN='TGV_Denoise_uv.txt';
+% after choosing 2,3 is X   Y     1     1     1     1     2
+% After grad we're X Y 1 1 1 1 2 ... 2
+% Multiply that by [1 0.5; 0.5 1]
+SymDiffWeight=[1 0.5; 0.5 1];
+SymDiffWeightP=permute(SymDiffWeight,[8 7 6 5 4 3 1 16 15 14 13 12 11 10 9 2]);
+TGV_uv_Ops={'fmac 1 32','grad 3','fmac 2 0'};
+WriteLinopToFile(TGV_Denoise_uvLinop_FN,TGV_uv_Ops);
+uvLinopRes=bart(['linopScript ' TGV_Denoise_uvLinop_FN],FillOnesTo16(size(Img)),Img,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP);
+fgmontage(uvLinopRes);
+%% 2nd regularizer is on dI/dx-u, dI/dy-v
+% we work as follows:
+% 
+% Increase [I,u,v] to [I 2I; u 2u; v 2v], Over a new dim AUX (sized 2) 
+% 
+% diff along X,Y, AUX. So we're left with
+% 
+% [X Y 1 1 1 TGV AUX 1 1 1 1 1 1 1 1 GRAD], GRAD of size 3
+% 
+% looking only at TGV,GRAD dims, we have: (? = not important)
+% 
+% M= [dI/dx dI/dy    ?                    -> GRAD dim
+% 
+%       ?     ?      du/dAUX=-u            rows:TGV dim
+% 
+%       ?     ?      dv/dAUX=-v    ]
+% 
+% On the AUX dim we'll have [-1, 1] multiplications of this matrix. 
+% 
+% From this matrix we'll choose dI/dx-u, dI/dx-v, into AUX2 (dim 8) to
+% 
+% [X Y 1 1 1 1 1 AUX2], where AUX2 contains dI/dx-u, dI/dy-v as needed
+AUX=[1;2];
+AUXP=permute(AUX,[7 6 5 4 3 2 1]);
+clear ChooseFromM
+ChooseFromM(:,:,1,2)=[1 0 0; 0 0 1; 0 0 0];
+ChooseFromM(:,:,2,2)=[0 1 0; 0 0 0; 0 0 1];
+ChooseFromMP=permute(ChooseFromM,[9 8 7 6 5 1 4 3 10 11 12 13 14 15 16 2]); % 2^15+2^5+2^6 =32864
+TGV_Denoise_dIuvLinop_FN='TGV_Denoise_dIuv.txt';
+TGV_dIuv_Ops={'fmac 3 0','grad 67','fmac 4 32864'};
+WriteLinopToFile(TGV_Denoise_dIuvLinop_FN,TGV_dIuv_Ops);
+dIuvLinopRes=bart(['linopScript ' TGV_Denoise_dIuvLinop_FN],FillOnesTo16(size(Img)),Img,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP,AUXP,ChooseFromMP);
+fgmontage(dIuvLinopRes);
+%% In one multi-linop file
+% Here we create a multi-linop file, and apply each of the linops on the
+% input Img, by calling linopScript -L
+TGV_Denoise_Linops_FN='TGV_Denoise_linops.txt';
+WriteLinopToFile(TGV_Denoise_Linops_FN,{TGV_Main_Ops,TGV_uv_Ops,TGV_dIuv_Ops });
+
+V1=bart(['linopScript -L 0 ' TGV_Denoise_Linops_FN],FillOnesTo16(size(Img)),Img,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP,AUXP,ChooseFromMP);
+V2=bart(['linopScript -L 1 ' TGV_Denoise_Linops_FN],FillOnesTo16(size(V1)),V1,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP,AUXP,ChooseFromMP);
+V3=bart(['linopScript -L 2 ' TGV_Denoise_Linops_FN],FillOnesTo16(size(V2)),V2,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP,AUXP,ChooseFromMP);
+
+size(V1)
+size(V2)
+size(V3)
+%% TGV denoising example
+% Now we call the parallel-imaging compressed-sensing recon with
+% linopScript by calling picsS, with the multi-linop Script file.
+% The first linop will be used as image-to-signal operator,
+% and the rest will used for the regularizers, by their order. So, the 1st
+% additional linop will be used for the first regularized defined in the
+% picsS -R part.
+%
+% We follow the authors' suggestion and set the regularization for the
+% first term to be double that of the second.
+[X1 Y1]=meshgrid(1:N,1:N);
+[X2 Y2]=meshgrid(1:2:N,1:2:N);
+TGVexample=X1;
+TGVexample((N/4)+(1:HalfN),(N/4)+(1:HalfN))=fliplr(X2);
+
+Noised=TGVexample+randn(N)*10;
+
+IdentitiyFN='Identity.txt';
+WriteLinopToFile(IdentitiyFN,'ident');
+
+DenoisedTV=bart(['picsS -R T:3:3:4 ' IdentitiyFN],FillOnesTo16(size(Noised)),Noised);
+DenoisedTVx=bart(['picsS -R T:3:3:8 ' IdentitiyFN],FillOnesTo16(size(Noised)),Noised);
+
+DenoisedTGV=bart(['picsS -m -R 1:0:2 -R 1:131:1 ' TGV_Denoise_Linops_FN],FillOnesTo16(size(Img)),Noised,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP,AUXP,ChooseFromMP);
+DenoisedTGVx=bart(['picsS -m -R 1:0:4 -R 1:131:2 ' TGV_Denoise_Linops_FN],FillOnesTo16(size(Img)),Noised,ChooseFirstP,ChooseLastTwoP,SymDiffWeightP,AUXP,ChooseFromMP);
+
+%% Resulting denoised images
+fgmontage(cat(3,DenoisedTV,DenoisedTGV(:,:,1)));title('TV                                                   TGV','FontSize',16);
+
+%% Comparison
+% while both TV and TGV show similar smoothness, the TGV preserves the
+% edges better. So maybe some of the math used here was right.
+figure;
+plot(squeeze(DenoisedTGV(HalfN,:,1)),'k');hold on;
+plot(squeeze(DenoisedTGVx(HalfN,:,1)),'r');hold on;
+plot(squeeze(DenoisedTV(HalfN,:,1)),'k:','LineWidth',2);hold on;
+plot(squeeze(DenoisedTVx(HalfN,:,1)),'r:','LineWidth',2);hold on;
+legend({'TGV weak','TGV strong','TV weak','TV strong'},'Location','Best')
+##### SOURCE END #####
+--></body></html>
