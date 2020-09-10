@@ -15,6 +15,10 @@ a 3     This is the adjoint of dblsz, i.e. cropping\
 a 2     This is the adjoint of fft, i.e. ifft\
 a 0
 
+# Manual / documentation / explanations
+Here:
+https://docs.google.com/presentation/d/1YmyeK1_T8uhIUAd3G5F9goTb5ghviJb-jwwZZM-SJUE/edit?usp=sharing
+
 # Example
 Here:
 https://giladddd.github.io/LinopScript/rrsg.html
