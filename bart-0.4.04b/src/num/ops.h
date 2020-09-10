@@ -23,6 +23,9 @@ struct operator_s;
 struct operator_p_s;
 
 extern const struct operator_s* GetOpFromOp_s(const struct operator_p_s* x);
+extern const struct operator_s* opFromOpps(
+		const struct operator_p_s* prox_fun,
+		float mu);
 
 // create functions
 
@@ -95,6 +98,8 @@ extern void operator_p_apply_unchecked(const struct operator_p_s* op, float mu, 
 
 
 // get functions
+#include <complex.h>
+
 struct iovec_s;
 extern unsigned int operator_nr_args(const struct operator_s* op);
 extern unsigned int operator_nr_in_args(const struct operator_s* op);
@@ -140,6 +145,23 @@ extern const struct operator_s* operator_permute(const struct operator_s* op, in
 
 
 extern _Bool operator_zero_or_null_p(const struct operator_s* op);
+
+// ggg
+const struct operator_s* operator_ones_create(unsigned int N, const long dims[N]);
+const struct operator_s* operator_spow_create(unsigned int N, const long dims[N], complex float val);
+const struct operator_s* operator_smul_create(unsigned int N, const long dims[N], complex float val);
+const struct operator_s* operator_zexp_create(unsigned int N, const long dims[N]);
+const struct operator_s* operator_zreal_create(unsigned int N, const long dims[N]);
+const struct operator_s* operator_zconj_create(unsigned int N, const long dims[N]);
+
+const struct operator_s* operator_zsqr_create(unsigned int N, const long dims[N]);
+const struct operator_s* operator_szdiv_create(unsigned int N, const long dims[N], complex float val);
+
+const struct operator_s* operator_zmul_create(unsigned int N, const long dims[N], complex float* t);
+const struct operator_s* operator_zdiv_create(unsigned int N, const long dims[N], complex float* t);
+const struct operator_s* operator_zrdiv_create(unsigned int N, const long dims[N], complex float* t);
+const struct operator_s* operator_zadd_create(unsigned int N, const long dims[N], complex float* t);
+const struct operator_s* operator_zsub_create(unsigned int N, const long dims[N], complex float* t);
 
 #include "misc/cppwrap.h"
 

@@ -23,6 +23,7 @@
 #include "num/ops.h"
 
 #include "iter/misc.h"
+#include "iter/italgos.h"
 
 #include "linops/linop.h"
 #include "linops/linopScript.h"
@@ -91,6 +92,8 @@ int main_picsS(int argc, char* argv[])
 	const char* image_start_file = NULL;
 	bool warm_start = false;
 
+	const char* RegCost_file = NULL;
+
 	struct admm_conf admm = { false, false, false, iter_admm_defaults.rho, iter_admm_defaults.maxitercg };
 
 	enum algo_t algo = ALGO_DEFAULT;
@@ -126,6 +129,7 @@ int main_picsS(int argc, char* argv[])
 		OPT_SET('J', &admm.relative_norm, "(ADMM residual balancing)"),
 		OPT_STRING('T', &image_truth_file, "file", "(truth file)"),
 		OPT_STRING('W', &image_start_file, "<img>", "Warm start with <img>"),
+		OPT_STRING('z', &RegCost_file, "<RegCost_file>", "put Reg cost in file"),
 		OPT_INT('d', &debug_level, "level", "Debug level"),
 		OPT_INT('O', &conf.rwiter, "rwiter", "(reweighting)"),
 		OPT_FLOAT('o', &conf.gamma, "gamma", "(reweighting)"),
@@ -173,9 +177,9 @@ int main_picsS(int argc, char* argv[])
     long inputDims_dims[DIMS];
     complex float* inputDims = load_cfl(argv[2], DIMS, inputDims_dims);
 
-	for(long d=0;d<inputDims_dims[0]*inputDims_dims[1];d++) {
-        img_dims[d]=inputDims[d];
-    }
+	// for(long d=0;d<inputDims_dims[0]*inputDims_dims[1];d++) {
+ //        img_dims[d]=inputDims[d];
+ //    }
 
 //     debug_printf(DP_INFO, "img_dims");
 // 	debug_print_dims(DP_INFO,DIMS,img_dims);
@@ -213,24 +217,36 @@ int main_picsS(int argc, char* argv[])
     // Linop script
     int num_args = argc - 1;
     
-	printf("main_picsS\n");
+	// printf("main_picsS\n");
     
-	ReadScriptFiles(&argv[4],num_args-4);
+	// ReadScriptFiles(&argv[4],num_args-4);
+	if(conf.gpu) {
+        ReadScriptFiles_gpu(&argv[4],num_args-4);
+    } else {
+        ReadScriptFiles(&argv[4],num_args-4);
+    }
     
     // fftmod(DIMS, getFdims(1), fftmod_flags, getDataFile(1), getDataFile(1)); // 1 is supposed to be sensitivities
             
+    // md_select_dims(DIMS, ~0, CurDims, img_dims);
+    // const struct linop_s* Sop =getLinopScriptFromFile(argv[1],CurDims,1);
+    const struct linop_s* Sop = getLinopScriptFromFile(argv[1],inputDims,inputDims_dims[1]);
+    
     long CurDims[DIMS];
-	md_select_dims(DIMS, ~0, CurDims, img_dims);
-    debug_printf(DP_INFO, "CurDims:");
+	md_copy_dims(DIMS, CurDims, linop_domain(Sop)->dims);
+
+	md_copy_dims(DIMS, img_dims, linop_domain(Sop)->dims);
+
+    debug_printf(DP_DEBUG1, "CurDims:");
 	debug_print_dims(DP_INFO,DIMS,CurDims);
     
 	long dimsAfterF[DIMS];
 	md_copy_dims(DIMS, dimsAfterF, CurDims);
-    const struct linop_s* Sop =getLinopScriptFromFile(argv[1],CurDims);
+    
     
 	debug_printf(DP_INFO, "Read forward script. dimsAfterF:");
 	debug_print_dims(DP_INFO,DIMS,dimsAfterF);
-	printf("OK linop script reading\n");
+	// printf("OK linop script reading\n");
 
 	debug_printf(DP_INFO, "img_dims:");
 	debug_print_dims(DP_INFO,DIMS,img_dims);
@@ -439,7 +455,7 @@ int main_picsS(int argc, char* argv[])
 
 
 	// initialize prox functions
-	printf("Preparing prox funcs\n");
+	// printf("Preparing prox funcs\n");
 
 	const struct operator_p_s* thresh_ops[NUM_REGS] = { NULL };
 	const struct linop_s* trafos[NUM_REGS] = { NULL };
@@ -493,8 +509,39 @@ int main_picsS(int argc, char* argv[])
 			    || (   (ALGO_NIHT == algo)
 				&& (regs[0].xform == NIHTWAV)));
 
+	//
+	// printf("Test applying adjoint\n");
+	// debug_print_dims(DP_DEBUG1,DIMS,img_dims);
+	// printf("Test applying kspDIms\n");
+	// debug_print_dims(DP_DEBUG1,DIMS,ksp_dims);
+
+	// complex float *aaa1=kspace;
+	// complex float *bbb1=image;
+
+	// complex float *kspx1;
+	// if(conf.gpu) {
+	// 	printf("moving to gpu\n");
+	// 	aaa1=md_gpu_move(DIMS, ksp_dims, kspace, CFL_SIZE);
+
+	// 	kspx1= md_alloc_gpu(DIMS, ksp_dims, CFL_SIZE);
+
+	// 	bbb1=md_gpu_move(DIMS, img_dims, image, CFL_SIZE);
+	// 	complex float *ccc1= md_alloc_gpu(DIMS, img_dims, CFL_SIZE);
+	// } else {
+	// 	kspx1= md_alloc(DIMS, ksp_dims, CFL_SIZE);	
+	// }
+
+	// const struct operator_s* OpToApply1;
+	// OpToApply1=Sop->forward;
+	// printf("Run Forward\n");
+	// // printf("Run -- %d --\n",OpToApply->N);
+	//  //,(Sop->forward)->N );
+	// // linop_forward(Sop, DIMS, ksp_dims, kspx,	DIMS, img_dims, bbb);
+	// operator_apply(OpToApply1, DIMS, ksp_dims, kspx1,	DIMS, img_dims, bbb1);
+
+
 	// Linop script: changed here - no pattern	
-	printf("Preparing operator\n");
+	// printf("Preparing operator\n");
 	const struct operator_s* op = sense_recon_create(&conf, max1_dims, forward_op,
 				// pat1_dims, (conf.bpsense) ? NULL : pattern1,
 				pat1_dims, NULL,
@@ -528,32 +575,113 @@ int main_picsS(int argc, char* argv[])
 		op = operator_loop_parallel(DIMS, loop_dims, op, loop_flags, conf.gpu);
 	}
 
-	const struct operator_s* adjoint=NULL;
-	adjoint = operator_ref(forward_op->adjoint);
+	// printf("Test applying adjoint\n");
+	// debug_print_dims(DP_DEBUG1,DIMS,img_dims);
+	// printf("Test applying kspDIms\n");
+	// debug_print_dims(DP_DEBUG1,DIMS,ksp_dims);
+
+	// complex float *aaa=kspace;
+	// complex float *bbb=image;
+
+	// complex float *kspx;
+	// if(conf.gpu) {
+	// 	printf("moving to gpu\n");
+	// 	aaa=md_gpu_move(DIMS, ksp_dims, kspace, CFL_SIZE);
+
+	// 	kspx= md_alloc_gpu(DIMS, ksp_dims, CFL_SIZE);
+
+	// 	bbb=md_gpu_move(DIMS, img_dims, image, CFL_SIZE);
+	// 	complex float *ccc= md_alloc_gpu(DIMS, img_dims, CFL_SIZE);
+
+	// 	// printf("Run normal\n");
+	// 	// operator_apply(Sop->normal, DIMS, img_dims, ccc,	DIMS, img_dims, bbb);
+	// } else {
+	// 	kspx= md_alloc(DIMS, ksp_dims, CFL_SIZE);	
+	// }
+
+	// const struct operator_s* OpToApply;
+	// OpToApply=Sop->forward;
+	// printf("Run Forward\n");
+	// // printf("Run -- %d --\n",OpToApply->N);
+	//  //,(Sop->forward)->N );
+	// // linop_forward(Sop, DIMS, ksp_dims, kspx,	DIMS, img_dims, bbb);
+	// operator_apply(OpToApply, DIMS, ksp_dims, kspx,	DIMS, img_dims, bbb);
+
+	// printf("running adjoint\n");
+	// operator_apply(Sop->adjoint, DIMS, img_dims, bbb,	DIMS, ksp_dims, aaa);
+
+	// printf("Now applying\n");
 	
-    printf("Now applying\n");
+	// complex float *kspace_maybe_in_gpu=kspace;
+	// if(conf.gpu) {
+	// 	printf("moving to gpu\n");
+	// 	kspace_maybe_in_gpu=md_gpu_move(DIMS, ksp_dims, kspace, CFL_SIZE);
+	// }
+
 	// Linop script: changed to argv[2]
 	// complex float* tmpx = create_cfl("/tmp/asdasdB", DIMS, img_dims);
 	// operator_apply(adjoint, DIMS, img_dims, tmpx,	DIMS, ksp_dims, kspace);
 	// md_clear(DIMS, img_dims, tmpx, CFL_SIZE);
 	// md_copy(DIMS, img_dims, tmpx, image_adj ,CFL_SIZE);
 	// unmap_cfl(16, img_dims, tmpx);
+	// if (NULL != RegCost_file) {
+	// 	debug_printf(DP_INFO, "Setting Reg cost no lambda to -1\n");
+	// 	setCurRegulaizerCostNoLambda(-1.0f); }
 
     // debug_printf(DP_INFO, "img_dims ");
 	// debug_print_dims(DP_INFO,DIMS,img_dims);
 	operator_apply(op, DIMS, img_dims, image, DIMS, conf.bpsense ? img_dims : ksp_dims, conf.bpsense ? NULL : kspace);
 
-    printf("Now freeing\n");
+
+	if (scale_im)
+		md_zsmul(DIMS, img_dims, image, image, scaling);
+
+	// clean up
+	if (NULL != RegCost_file) {
+		debug_printf(DP_INFO, "Calculating Reg on image...\n");
+		setCurRegulaizerCostNoLambda(-1.0f);
+
+		// struct iter_op_p_s it_prox_ops[1];
+
+
+		debug_printf(DP_INFO, "AAA...\n");
+
+		const struct operator_s* opop=opFromOpps(thresh_ops[0],0);
+    	
+
+		// it_prox_ops[0]=OPERATOR_P2ITOP(thresh_ops[0]);
+
+		debug_printf(DP_INFO, "AA...\n");
+		// complex float* tmp_norm = md_alloc_sameplace(data->D, data->norm_dim, CFL_SIZE, optr);
+		complex float* tmp = md_alloc(linop_codomain(trafos[0])->N, linop_codomain(trafos[0])->dims, CFL_SIZE);
+		// complex float* tmp2 = md_alloc(DIMS, operator_codomain(thresh_ops[0])->dims, CFL_SIZE);
+		complex float* tmp2 = md_alloc(linop_codomain(trafos[0])->N, operator_codomain(opop)->dims, CFL_SIZE);
+		debug_printf(DP_INFO, "A...\n");
+		operator_apply(trafos[0]->forward,linop_codomain(trafos[0])->N, linop_codomain(trafos[0])->dims, tmp, DIMS, linop_domain(trafos[0])->dims, image);
+		debug_printf(DP_INFO, "B...\n");
+		operator_apply(opop, linop_codomain(trafos[0])->N, operator_codomain(opop)->dims, tmp2, linop_codomain(trafos[0])->N, linop_codomain(trafos[0])->dims, tmp);
+		// iter_op_p_call(it_prox_ops[0], 0.0f, tmp2, tmp);
+		debug_printf(DP_INFO, "C...\n");
+		// operator_apply(thresh_ops[0],DIMS,operator_codomain(thresh_ops[0])->dims,tmp2,DIMS,linop_codomain(trafos[0])->dims,tmp);
+
+		float CurRegCost=getCurRegulaizerCostNoLambda();
+	    debug_printf(DP_INFO, "Reg cost %f\n",CurRegCost);
+	    long singletonDims[DIMS] = { [0 ... DIMS - 1] = 1 };
+	    complex float* RegScr = create_cfl(RegCost_file, DIMS, singletonDims);
+	    RegScr[0]=CurRegCost;
+	    unmap_cfl(DIMS, singletonDims, RegScr);
+
+	    md_free(tmp);
+	    md_free(tmp2);
+	}
+
+    // printf("Now freeing\n");
 	operator_free(op);
 
 	opt_reg_free(&ropts, thresh_ops, trafos);
 
 	italgo_config_free(it);
 
-	if (scale_im)
-		md_zsmul(DIMS, img_dims, image, image, scaling);
-
-	// clean up
 
     // Linop script: removed
 // 	unmap_cfl(DIMS, map_dims, maps);
@@ -573,6 +701,8 @@ int main_picsS(int argc, char* argv[])
 
     // Linop script
     ClearReadScriptFiles(&argv[4],num_args-4);
+    FreeLinops();
+    FreeOutLinops();
     // end Linop script
     
 	return 0;

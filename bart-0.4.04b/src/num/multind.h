@@ -90,6 +90,7 @@ extern void* md_calloc(unsigned int D, const long dimensions[__VLA(D)], size_t s
 #ifdef USE_CUDA
 extern void* md_alloc_gpu(unsigned int D, const long dimensions[__VLA(D)], size_t size);
 extern void* md_gpu_move(unsigned int D, const long dims[__VLA(D)], const void* ptr, size_t size);
+extern void* md_cpu_move(unsigned int D, const long dims[__VLA(D)], const void* ptr, size_t size);
 #endif
 extern void* md_alloc_sameplace(unsigned int D, const long dimensions[__VLA(D)], size_t size, const void* ptr);
 extern void md_free(const void* p);

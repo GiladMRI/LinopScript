@@ -160,3 +160,20 @@ struct linop_s* linop_grad_create(long N, const long dims[N], unsigned int flags
 	return linop_create(N + 1, dims2, N, dims, CAST_UP(PTR_PASS(data)), grad_op_apply, grad_op_adjoint, grad_op_normal, NULL, grad_op_free);
 }
 
+struct linop_s* linop_gradm_create(long N, const long dims[N], unsigned int flags)
+{
+	PTR_ALLOC(struct grad_s, data);
+	SET_TYPEID(grad_s, data);
+
+	long dims2[N ];
+	grad_dims(N-1, dims2, flags, dims);
+
+	data->N = N;
+	data->flags = flags;
+
+	data->dims = *TYPE_ALLOC(long[N]);
+
+	md_copy_dims(N, data->dims, dims2);
+
+	return linop_create(N, dims2, N, dims, CAST_UP(PTR_PASS(data)), grad_op_apply, grad_op_adjoint, grad_op_normal, NULL, grad_op_free);
+}

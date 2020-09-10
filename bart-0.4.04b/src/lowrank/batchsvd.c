@@ -12,11 +12,14 @@
 
 #include "misc/misc.h"
 
+#include "num/flpmath.h"
 #include "num/blas.h"
 #include "num/lapack.h"
 #include "num/linalg.h"
 
 #include "batchsvd.h"
+
+#include "misc/debug.h"
 
 
 
@@ -97,6 +100,13 @@ void batch_svthresh(long M, long N, long num_blocks, float lambda, complex float
 
 void batch_svthreshx(long M, long N, long num_blocks, float lambda, complex float dst[num_blocks][N][M], unsigned int option)
 {
+	// debug_printf(DP_DEBUG1,"batch_svthreshx\n");
+	PTR_ALLOC(float[num_blocks], SumS);
+	bool needCurRegulaizerCostNoLambda= getCurRegulaizerCostNoLambda()<0.0f;
+	float CurCostNoLambda=getCurRegulaizerCostNoLambda();
+	debug_printf(DP_DEBUG3,"CurCostNoLambda %f\n",CurCostNoLambda);
+	CurCostNoLambda=0.0f;
+
 #pragma omp parallel
     {
 	long minMN = MIN(M, N);
@@ -106,6 +116,7 @@ void batch_svthreshx(long M, long N, long num_blocks, float lambda, complex floa
 	PTR_ALLOC(float[minMN], S);
 	PTR_ALLOC(complex float[minMN][minMN], AA);
 
+	
 #pragma omp for
 	for (int b = 0; b < num_blocks; b++) {
 
@@ -136,6 +147,8 @@ void batch_svthreshx(long M, long N, long num_blocks, float lambda, complex floa
 
 		if (s_upperbound < lambda * lambda) {
 
+			(*SumS)[b]=0;
+
 			mat_zero(N, M, dst[b]);
 			continue;
 		}
@@ -143,6 +156,15 @@ void batch_svthreshx(long M, long N, long num_blocks, float lambda, complex floa
 		lapack_svd_econ(M, N, *U, *VT, *S, dst[b]);
 
 		float mag0;
+
+		if(needCurRegulaizerCostNoLambda) {
+			float CurSSum=0.0f;
+			for (int i = 0; i < minMN; i++) {
+				CurSSum += fabs((*S)[i]);
+			}
+			(*SumS)[b]=CurSSum;
+			// debug_printf(DP_DEBUG1,"Calculated [%d] %f\n",b,CurSSum);
+		}
 
 		// ggg try: Soft threshold, but not on 1st value
 		switch(option) {
@@ -209,9 +231,28 @@ void batch_svthreshx(long M, long N, long num_blocks, float lambda, complex floa
 		blas_matrix_multiply(M, N, minMN, dst[b], *U, *VT);
 	}
 
+	// if(getCurRegulaizerCost()<0.0f) {
+	// 	float CurCost=lambda*md_z1norm2(N, wdims, MD_STRIDES(N, wdims, CFL_SIZE), tmp);
+	// 	// float CurCost=lambda*md_zasum(N, wdims, tmp);
+	// 	setCurRegulaizerCost(float);
+	// }
+	
+
 	PTR_FREE(U);
 	PTR_FREE(VT);
 	PTR_FREE(S);
 	PTR_FREE(AA);
     } // #pragma omp parallel
+
+    if(needCurRegulaizerCostNoLambda) {
+		for (int i = 0; i < num_blocks; i++) {
+				// float tmp=(*SumS)[i];
+				// debug_printf(DP_DEBUG1,"Adding [%d] %f\n",i,tmp);
+				CurCostNoLambda += fabs((*SumS)[i]);
+			}
+		debug_printf(DP_DEBUG1,"Setting CurCostNoLambda to %f\n",CurCostNoLambda);
+		setCurRegulaizerCostNoLambda(CurCostNoLambda);
+	}
+			
+    PTR_FREE(SumS);
 }

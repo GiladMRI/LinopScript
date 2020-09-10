@@ -53,6 +53,16 @@
 #include "num/gpukrnls.h"
 #endif
 
+static float CurRegulaizerCost=0.0f;
+void setCurRegulaizerCost(float f) { CurRegulaizerCost=f; }
+float getCurRegulaizerCost() { return CurRegulaizerCost; }
+
+static float CurRegulaizerCostNoLambda=0.0f;
+void setCurRegulaizerCostNoLambda(float f) { 
+	debug_printf(DP_INFO, "Reg cost no lambda %f -> %f\n",CurRegulaizerCostNoLambda,f);
+	CurRegulaizerCostNoLambda=f; }
+float getCurRegulaizerCostNoLambda() { return CurRegulaizerCostNoLambda; }
+
 
 typedef void (*md_2op_t)(unsigned int D, const long dims[D], const long ostrs[D], float* optr, const long istrs1[D], const float* iptr1);
 typedef void (*md_z2op_t)(unsigned int D, const long dims[D], const long ostrs[D], complex float* optr, const long istrs1[D], const complex float* iptr1);
@@ -399,6 +409,27 @@ static void make_z3op_scalar(md_z3op_t fun, unsigned int D, const long dims[D], 
 	md_singleton_strides(D, strs1);
 
 	fun(D, dims, ostr, optr, istr, iptr, strs1, valp);
+
+#ifdef USE_CUDA
+	if (cuda_ondevice(optr))
+		md_free(valp);
+#endif
+}
+
+static void make_z3op_scalar_first(md_z3op_t fun, unsigned int D, const long dims[D], const long ostr[D], complex float* optr, const long istr[D], const complex float* iptr, complex float val)
+{
+	complex float* valp = &val;
+
+#ifdef USE_CUDA
+	if (cuda_ondevice(optr))
+		valp = gpu_constant(&val, CFL_SIZE);
+#endif
+
+	long strs1[D];
+	md_singleton_strides(D, strs1);
+
+	// fun(D, dims, ostr, optr, istr, iptr, strs1, valp);
+	fun(D, dims, ostr, optr, strs1, valp, istr, iptr);
 
 #ifdef USE_CUDA
 	if (cuda_ondevice(optr))
@@ -895,6 +926,24 @@ void md_zspow(unsigned int D, const long dims[D], complex float* optr, const com
 	md_zspow2(D, dims, strs, optr, strs, iptr, val);
 }
 
+void md_szdiv(unsigned int D, const long dims[D], complex float* optr, const complex float* iptr, complex float val)
+{
+	long strs[D];
+	md_calc_strides(D, strs, dims, CFL_SIZE);
+
+	md_szdiv2(D, dims, strs, optr, strs, iptr, val);
+}
+
+/**
+ * Divide scalar by complex array
+ *
+ * optr = scalar/iptr
+ */
+void md_szdiv2(unsigned int D, const long dims[D], const long ostrs[D], complex float* optr, const long istrs[D], const complex float* iptr, complex float val)
+{
+	// make_z3op_scalar(md_zpow2, D, dims, ostrs, optr, istrs, iptr, val);
+	make_z3op_scalar_first(md_zdiv2, D, dims, ostrs, optr, istrs, iptr, val);
+}
 
 
 /**

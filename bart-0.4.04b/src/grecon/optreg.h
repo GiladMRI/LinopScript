@@ -18,7 +18,7 @@ struct linop_s;
 
 struct reg_s {
 
-	enum { L1WAV, NIHTWAV, NIHTIM, TV, LLR, MLR, IMAGL1, IMAGL2, L1IMG, L2IMG, FTL1, LAPLACE, POS, HLLR } xform;
+	enum { L1WAV, NIHTWAV, NIHTIM, TV, LLR, MLR, IMAGL1, IMAGL2, L1IMG, L2IMG, FTL1, LAPLACE, POS, HLLR, L2CH, L1LS, L2LS, LRLS, L2FD } xform;
 
 	unsigned int xflags;
 	unsigned int jflags;
@@ -29,7 +29,7 @@ struct reg_s {
 	// ggg
 	float alpha;
 	unsigned int q;
-	unsigned int k2;
+	long k2;
 	unsigned int k3;
 };
 

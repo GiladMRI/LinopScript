@@ -27,6 +27,8 @@ extern void cuda_memcache_off(void);
 extern void cuda_memcache_clear(void);
 extern void print_cuda_meminfo(void);
 
+extern int cuda_lastinit(void);
+
 #ifdef __cplusplus
 }
 #endif

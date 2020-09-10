@@ -634,6 +634,10 @@ const struct operator_s* operator_null_create(unsigned int N, const long dims[N]
  */
 const struct operator_s* operator_chain(const struct operator_s* a, const struct operator_s* b)
 {
+	// ggg
+	if(b==NULL) { return a; }
+	if(a==NULL) { return b; }
+
 	// check compatibility
 
 	debug_printf(DP_DEBUG4, "operator chain:\n");
@@ -791,6 +795,7 @@ void operator_apply_unchecked(const struct operator_s* op, complex float* dst, c
 
 void operator_apply2(const struct operator_s* op, unsigned int ON, const long odims[ON], const long ostrs[ON], complex float* dst, const long IN, const long idims[IN], const long istrs[ON], const complex float* src)
 {
+	// debug_printf(DP_INFO,"QQ %ld\n",op->N);
 	assert(2 == op->N);
 	// For Linop script debug
 	/*debug_printf(DP_INFO, "In");
@@ -1215,12 +1220,17 @@ static void gpuwrp_fun(const operator_data_t* _data, unsigned int N, void* args[
 
 	assert(N == operator_nr_args(op));
 
-	debug_printf(DP_DEBUG1, "GPU start.\n");
-
+	
         int nr_cuda_devices = MIN(cuda_devices(), MAX_CUDA_DEVICES);
         int gpun = omp_get_thread_num() % nr_cuda_devices;
 
-        cuda_init(gpun);
+       debug_printf(DP_DEBUG1, "GPU start %d %d %d.\n",gpun,omp_get_thread_num(),nr_cuda_devices);
+       if(cuda_lastinit()>-1) {
+       		debug_printf(DP_DEBUG1, "GPU already init to %d\n",cuda_lastinit());
+       		// cuda_init(cuda_lastinit());
+       		// gpun=cuda_lastinit();
+       } else {
+        	cuda_init(gpun); }
 
 	for (unsigned int i = 0; i < N; i++) {
 
@@ -1651,7 +1661,7 @@ bool operator_zero_or_null_p(const struct operator_s* op)
 
 
 
-
+/*
 
 
 struct add_s {
@@ -1739,4 +1749,797 @@ const struct operator_s* operator_add_create(unsigned int N, const long dims[N],
     return operator_generic_create2(1, 1u, (unsigned int[1]){ N },
 		(const long*[1]){ dims },
 		(const long*[2]){ MD_STRIDES(N, dims, CFL_SIZE) }, CAST_UP(PTR_PASS(data)), add_apply, add_free);
+}
+
+*/
+
+
+
+
+
+
+// ggg
+struct ones_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+};
+
+static DEF_TYPEID(ones_s);
+
+static void ones_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+        auto d = CAST_DOWN(ones_s, _data);
+	assert(2 == N);
+        // md_clear2(d->codomain->N, d->codomain->dims, d->codomain->strs, args[0], d->codomain->size);
+
+	const complex float One=1;
+	// md_zfill(d->codomain->N, d->codomain->dims, args[0], One);
+
+	// const complex float Zero=0;
+	// md_zsmul(d->codomain->N, d->codomain->dims, args[0], args[0], Zero);
+	md_clear(d->codomain->N, d->codomain->dims, args[0], CFL_SIZE);
+	md_zexp(d->codomain->N, d->codomain->dims, args[0], args[0]);
+	// md_zsadd(d->codomain->N, d->codomain->dims, args[0], args[0], One);
+
+}
+
+static void ones_free(const operator_data_t* _data)
+{
+        auto d = CAST_DOWN(ones_s, _data);
+        iovec_free(d->codomain);
+	xfree(d);
+}
+
+const struct operator_s* operator_ones_create2(unsigned int N, const long dims[N], const long strs[N])
+{
+
+	PTR_ALLOC(struct ones_s, data);
+	SET_TYPEID(ones_s, data);
+
+        data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+
+        return operator_create(N, dims, 
+		N, dims,
+		CAST_UP(PTR_PASS(data)), ones_apply, ones_free);
+}
+
+const struct operator_s* operator_ones_create(unsigned int N, const long dims[N])
+{
+        return operator_ones_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE));
+}
+
+
+struct spow_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+	complex float val;
+};
+
+static DEF_TYPEID(spow_s);
+
+static void spow_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+        auto d = CAST_DOWN(spow_s, _data);
+	assert(2 == N);
+	debug_printf(DP_DEBUG1, "spow_apply\n");
+	md_zspow(d->codomain->N, d->codomain->dims, args[0], args[1], d->val);
+	debug_printf(DP_DEBUG1, "ok\n");
+}
+
+static void spow_free(const operator_data_t* _data)
+{
+        auto d = CAST_DOWN(spow_s, _data);
+        iovec_free(d->codomain);
+	xfree(d);
+}
+
+const struct operator_s* operator_spow_create2(unsigned int N, const long dims[N], const long strs[N], complex float val)
+{
+
+	PTR_ALLOC(struct spow_s, data);
+	SET_TYPEID(spow_s, data);
+
+        data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+        data->val=val;
+
+        return operator_create(N, dims, 
+		N, dims,
+		CAST_UP(PTR_PASS(data)), spow_apply, spow_free);
+}
+
+const struct operator_s* operator_spow_create(unsigned int N, const long dims[N], complex float val)
+{
+        return operator_spow_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE), val);
+}
+
+
+
+struct szdiv_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+	complex float val;
+};
+
+static DEF_TYPEID(szdiv_s);
+
+static void szdiv_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+        auto d = CAST_DOWN(szdiv_s, _data);
+	assert(2 == N);
+	// debug_printf(DP_DEBUG1, "szdiv_apply\n");
+	md_szdiv(d->codomain->N, d->codomain->dims, args[0], args[1], d->val);
+	// debug_printf(DP_DEBUG1, "ok\n");
+}
+
+static void szdiv_free(const operator_data_t* _data)
+{
+        auto d = CAST_DOWN(szdiv_s, _data);
+        iovec_free(d->codomain);
+	xfree(d);
+}
+
+const struct operator_s* operator_szdiv_create2(unsigned int N, const long dims[N], const long strs[N], complex float val)
+{
+
+	PTR_ALLOC(struct szdiv_s, data);
+	SET_TYPEID(szdiv_s, data);
+
+        data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+        data->val=val;
+
+        return operator_create(N, dims, 
+		N, dims,
+		CAST_UP(PTR_PASS(data)), szdiv_apply, szdiv_free);
+}
+
+const struct operator_s* operator_szdiv_create(unsigned int N, const long dims[N], complex float val)
+{
+        return operator_szdiv_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE), val);
+}
+
+
+
+
+struct smul_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+	complex float val;
+};
+
+static DEF_TYPEID(smul_s);
+
+static void smul_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+    auto d = CAST_DOWN(smul_s, _data);
+	assert(2 == N);
+	md_zsmul(d->codomain->N, d->codomain->dims, args[0], args[1], d->val);
+}
+
+static void smul_free(const operator_data_t* _data)
+{
+    auto d = CAST_DOWN(smul_s, _data);
+    iovec_free(d->codomain);
+	xfree(d);
+}
+
+const struct operator_s* operator_smul_create2(unsigned int N, const long dims[N], const long strs[N], complex float val)
+{
+
+	PTR_ALLOC(struct smul_s, data);
+	SET_TYPEID(smul_s, data);
+
+    data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+    data->val=val;
+
+    return operator_create(N, dims, 
+	N, dims,
+	CAST_UP(PTR_PASS(data)), smul_apply, smul_free);
+}
+
+const struct operator_s* operator_smul_create(unsigned int N, const long dims[N], complex float val)
+{
+    return operator_smul_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE), val);
+}
+
+
+struct zexp_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+};
+
+static DEF_TYPEID(zexp_s);
+
+static void zexp_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+    auto d = CAST_DOWN(zexp_s, _data);
+	assert(2 == N);
+	md_zexp(d->codomain->N, d->codomain->dims, args[0], args[1]);
+}
+
+static void zexp_free(const operator_data_t* _data)
+{
+    auto d = CAST_DOWN(zexp_s, _data);
+    iovec_free(d->codomain);
+	xfree(d);
+}
+
+const struct operator_s* operator_zexp_create2(unsigned int N, const long dims[N], const long strs[N])
+{
+
+	PTR_ALLOC(struct zexp_s, data);
+	SET_TYPEID(zexp_s, data);
+
+    data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+
+    return operator_create(N, dims, 
+	N, dims,
+	CAST_UP(PTR_PASS(data)), zexp_apply, zexp_free);
+}
+
+const struct operator_s* operator_zexp_create(unsigned int N, const long dims[N])
+{
+        return operator_zexp_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE));
+}
+
+
+
+
+
+struct zsqr_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+};
+
+static DEF_TYPEID(zsqr_s);
+
+static void zsqr_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+    auto d = CAST_DOWN(zsqr_s, _data);
+	assert(2 == N);
+	md_zmul(d->codomain->N, d->codomain->dims, args[0], args[1], args[1]);
+	// md_zadd(d->codomain->N, d->codomain->dims, args[0], args[0], tensor);
+}
+
+static void zsqr_free(const operator_data_t* _data)
+{
+    auto d = CAST_DOWN(zsqr_s, _data);
+    iovec_free(d->codomain);
+	xfree(d);
+}
+
+const struct operator_s* operator_zsqr_create2(unsigned int N, const long dims[N], const long strs[N])
+{
+
+	PTR_ALLOC(struct zsqr_s, data);
+	SET_TYPEID(zsqr_s, data);
+
+    data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+
+    return operator_create(N, dims, 
+	N, dims,
+	CAST_UP(PTR_PASS(data)), zsqr_apply, zsqr_free);
+}
+
+const struct operator_s* operator_zsqr_create(unsigned int N, const long dims[N])
+{
+        return operator_zsqr_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE));
+}
+
+
+
+
+struct zreal_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+};
+
+static DEF_TYPEID(zreal_s);
+
+static void zreal_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+        auto d = CAST_DOWN(zreal_s, _data);
+	assert(2 == N);
+	md_zreal(d->codomain->N, d->codomain->dims, args[0], args[1]);
+}
+
+static void zreal_free(const operator_data_t* _data)
+{
+        auto d = CAST_DOWN(zreal_s, _data);
+        iovec_free(d->codomain);
+	xfree(d);
+}
+
+const struct operator_s* operator_zreal_create2(unsigned int N, const long dims[N], const long strs[N])
+{
+
+	PTR_ALLOC(struct zreal_s, data);
+	SET_TYPEID(zreal_s, data);
+
+        data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+
+        return operator_create(N, dims, 
+		N, dims,
+		CAST_UP(PTR_PASS(data)), zreal_apply, zreal_free);
+}
+
+const struct operator_s* operator_zreal_create(unsigned int N, const long dims[N])
+{
+        return operator_zreal_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE));
+}
+
+struct zconj_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+};
+
+static DEF_TYPEID(zconj_s);
+
+static void zconj_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+        auto d = CAST_DOWN(zconj_s, _data);
+	assert(2 == N);
+	md_zconj(d->codomain->N, d->codomain->dims, args[0], args[1]);
+}
+
+static void zconj_free(const operator_data_t* _data)
+{
+        auto d = CAST_DOWN(zconj_s, _data);
+        iovec_free(d->codomain);
+	xfree(d);
+}
+
+const struct operator_s* operator_zconj_create2(unsigned int N, const long dims[N], const long strs[N])
+{
+
+	PTR_ALLOC(struct zconj_s, data);
+	SET_TYPEID(zconj_s, data);
+
+        data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+
+        return operator_create(N, dims, 
+		N, dims,
+		CAST_UP(PTR_PASS(data)), zconj_apply, zconj_free);
+}
+
+const struct operator_s* operator_zconj_create(unsigned int N, const long dims[N])
+{
+        return operator_zconj_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE));
+}
+
+
+
+
+
+
+
+
+struct zmul_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+
+	const complex float* tensor;
+#ifdef USE_CUDA
+	const complex float* gpu_tensor;
+#endif
+};
+
+static DEF_TYPEID(zmul_s);
+
+#ifdef USE_CUDA
+static const complex float* zmul_get_tensor(const struct zmul_s* data, bool gpu)
+{
+	const complex float* tensor = data->tensor;
+
+	if (gpu) {
+		if (NULL == data->gpu_tensor)
+			((struct zmul_s*)data)->gpu_tensor = md_gpu_move(data->codomain->N, data->codomain->dims, data->tensor, CFL_SIZE);
+		tensor = data->gpu_tensor;
+	}
+	return tensor;
+}
+#endif
+
+static void zmul_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+    auto d = CAST_DOWN(zmul_s, _data);
+	assert(2 == N);
+
+#ifdef USE_CUDA
+	const complex float* tensor = zmul_get_tensor(d, cuda_ondevice(args[1]));
+#else
+	const complex float* tensor = d->tensor;
+#endif
+
+	md_zmul(d->codomain->N, d->codomain->dims, args[0], args[1], tensor);
+}
+
+static void zmul_free(const operator_data_t* _data)
+{
+    auto d = CAST_DOWN(zmul_s, _data);
+    iovec_free(d->codomain);
+
+#ifdef USE_CUDA
+	if (NULL != d->gpu_tensor)
+		md_free((void*)d->gpu_tensor);
+#endif
+
+	xfree(d);
+}
+
+const struct operator_s* operator_zmul_create2(unsigned int N, const long dims[N], const long strs[N], complex float* t)
+{
+
+	PTR_ALLOC(struct zmul_s, data);
+	SET_TYPEID(zmul_s, data);
+
+    data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+    data->tensor=t;
+
+    data->tensor = t;
+#ifdef USE_CUDA
+	data->gpu_tensor = NULL; 
+#endif
+
+    return operator_create(N, dims, N, dims,
+	CAST_UP(PTR_PASS(data)), zmul_apply, zmul_free);
+}
+
+const struct operator_s* operator_zmul_create(unsigned int N, const long dims[N], complex float* t)
+{
+    return operator_zmul_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE), t);
+}
+
+
+
+
+
+
+struct zdiv_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+
+	const complex float* tensor;
+#ifdef USE_CUDA
+	const complex float* gpu_tensor;
+#endif
+};
+
+static DEF_TYPEID(zdiv_s);
+
+#ifdef USE_CUDA
+static const complex float* zdiv_get_tensor(const struct zdiv_s* data, bool gpu)
+{
+	const complex float* tensor = data->tensor;
+
+	if (gpu) {
+		if (NULL == data->gpu_tensor)
+			((struct zdiv_s*)data)->gpu_tensor = md_gpu_move(data->codomain->N, data->codomain->dims, data->tensor, CFL_SIZE);
+		tensor = data->gpu_tensor;
+	}
+	return tensor;
+}
+#endif
+
+static void zdiv_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+    auto d = CAST_DOWN(zdiv_s, _data);
+	assert(2 == N);
+
+#ifdef USE_CUDA
+	const complex float* tensor = zdiv_get_tensor(d, cuda_ondevice(args[1]));
+#else
+	const complex float* tensor = d->tensor;
+#endif
+
+	md_zdiv(d->codomain->N, d->codomain->dims, args[0], args[1], tensor);
+}
+
+static void zdiv_free(const operator_data_t* _data)
+{
+    auto d = CAST_DOWN(zdiv_s, _data);
+    iovec_free(d->codomain);
+
+#ifdef USE_CUDA
+	if (NULL != d->gpu_tensor)
+		md_free((void*)d->gpu_tensor);
+#endif
+
+	xfree(d);
+}
+
+const struct operator_s* operator_zdiv_create2(unsigned int N, const long dims[N], const long strs[N], complex float* t)
+{
+
+	PTR_ALLOC(struct zdiv_s, data);
+	SET_TYPEID(zdiv_s, data);
+
+    data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+    data->tensor=t;
+
+    data->tensor = t;
+#ifdef USE_CUDA
+	data->gpu_tensor = NULL; 
+#endif
+
+    return operator_create(N, dims, N, dims,
+	CAST_UP(PTR_PASS(data)), zdiv_apply, zdiv_free);
+}
+
+const struct operator_s* operator_zdiv_create(unsigned int N, const long dims[N], complex float* t)
+{
+    return operator_zdiv_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE), t);
+}
+
+
+
+
+struct zrdiv_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+
+	const complex float* tensor;
+#ifdef USE_CUDA
+	const complex float* gpu_tensor;
+#endif
+};
+
+static DEF_TYPEID(zrdiv_s);
+
+#ifdef USE_CUDA
+static const complex float* zrdiv_get_tensor(const struct zrdiv_s* data, bool gpu)
+{
+	const complex float* tensor = data->tensor;
+
+	if (gpu) {
+		if (NULL == data->gpu_tensor)
+			((struct zrdiv_s*)data)->gpu_tensor = md_gpu_move(data->codomain->N, data->codomain->dims, data->tensor, CFL_SIZE);
+		tensor = data->gpu_tensor;
+	}
+	return tensor;
+}
+#endif
+
+static void zrdiv_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+    auto d = CAST_DOWN(zrdiv_s, _data);
+	assert(2 == N);
+
+#ifdef USE_CUDA
+	const complex float* tensor = zrdiv_get_tensor(d, cuda_ondevice(args[1]));
+#else
+	const complex float* tensor = d->tensor;
+#endif
+
+	md_zdiv(d->codomain->N, d->codomain->dims, args[0], tensor, args[1]);
+}
+
+static void zrdiv_free(const operator_data_t* _data)
+{
+    auto d = CAST_DOWN(zrdiv_s, _data);
+    iovec_free(d->codomain);
+
+#ifdef USE_CUDA
+	if (NULL != d->gpu_tensor)
+		md_free((void*)d->gpu_tensor);
+#endif
+
+	xfree(d);
+}
+
+const struct operator_s* operator_zrdiv_create2(unsigned int N, const long dims[N], const long strs[N], complex float* t)
+{
+
+	PTR_ALLOC(struct zrdiv_s, data);
+	SET_TYPEID(zrdiv_s, data);
+
+    data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+    data->tensor=t;
+
+    data->tensor = t;
+#ifdef USE_CUDA
+	data->gpu_tensor = NULL; 
+#endif
+
+    return operator_create(N, dims, N, dims,
+	CAST_UP(PTR_PASS(data)), zrdiv_apply, zrdiv_free);
+}
+
+const struct operator_s* operator_zrdiv_create(unsigned int N, const long dims[N], complex float* t)
+{
+    return operator_zrdiv_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE), t);
+}
+
+
+
+
+
+
+
+
+
+
+struct zadd_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+
+	const complex float* tensor;
+#ifdef USE_CUDA
+	const complex float* gpu_tensor;
+#endif
+};
+
+static DEF_TYPEID(zadd_s);
+
+#ifdef USE_CUDA
+static const complex float* zadd_get_tensor(const struct zadd_s* data, bool gpu)
+{
+	const complex float* tensor = data->tensor;
+
+	if (gpu) {
+		if (NULL == data->gpu_tensor)
+			((struct zadd_s*)data)->gpu_tensor = md_gpu_move(data->codomain->N, data->codomain->dims, data->tensor, CFL_SIZE);
+		tensor = data->gpu_tensor;
+	}
+	return tensor;
+}
+#endif
+
+static void zadd_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+    auto d = CAST_DOWN(zadd_s, _data);
+	assert(2 == N);
+
+#ifdef USE_CUDA
+	const complex float* tensor = zadd_get_tensor(d, cuda_ondevice(args[1]));
+#else
+	const complex float* tensor = d->tensor;
+#endif
+
+	md_zadd(d->codomain->N, d->codomain->dims, args[0], args[1], tensor);
+}
+
+static void zadd_free(const operator_data_t* _data)
+{
+    auto d = CAST_DOWN(zadd_s, _data);
+    iovec_free(d->codomain);
+
+#ifdef USE_CUDA
+	if (NULL != d->gpu_tensor)
+		md_free((void*)d->gpu_tensor);
+#endif
+
+	xfree(d);
+}
+
+const struct operator_s* operator_zadd_create2(unsigned int N, const long dims[N], const long strs[N], complex float* t)
+{
+
+	PTR_ALLOC(struct zadd_s, data);
+	SET_TYPEID(zadd_s, data);
+
+    data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+    data->tensor=t;
+
+    data->tensor = t;
+#ifdef USE_CUDA
+	data->gpu_tensor = NULL; 
+#endif
+
+    return operator_create(N, dims, N, dims,
+	CAST_UP(PTR_PASS(data)), zadd_apply, zadd_free);
+}
+
+const struct operator_s* operator_zadd_create(unsigned int N, const long dims[N], complex float* t)
+{
+    return operator_zadd_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE), t);
+}
+
+
+
+
+
+
+
+
+
+struct zsub_s {
+
+	INTERFACE(operator_data_t);
+
+	const struct iovec_s* codomain;
+
+	const complex float* tensor;
+#ifdef USE_CUDA
+	const complex float* gpu_tensor;
+#endif
+};
+
+static DEF_TYPEID(zsub_s);
+
+#ifdef USE_CUDA
+static const complex float* zsub_get_tensor(const struct zsub_s* data, bool gpu)
+{
+	const complex float* tensor = data->tensor;
+
+	if (gpu) {
+		if (NULL == data->gpu_tensor)
+			((struct zsub_s*)data)->gpu_tensor = md_gpu_move(data->codomain->N, data->codomain->dims, data->tensor, CFL_SIZE);
+		tensor = data->gpu_tensor;
+	}
+	return tensor;
+}
+#endif
+
+static void zsub_apply(const operator_data_t* _data, unsigned int N, void* args[N])
+{
+    auto d = CAST_DOWN(zsub_s, _data);
+	assert(2 == N);
+
+#ifdef USE_CUDA
+	const complex float* tensor = zsub_get_tensor(d, cuda_ondevice(args[1]));
+#else
+	const complex float* tensor = d->tensor;
+#endif
+
+	md_zsub(d->codomain->N, d->codomain->dims, args[0], args[1], tensor);
+}
+
+static void zsub_free(const operator_data_t* _data)
+{
+    auto d = CAST_DOWN(zsub_s, _data);
+    iovec_free(d->codomain);
+
+#ifdef USE_CUDA
+	if (NULL != d->gpu_tensor)
+		md_free((void*)d->gpu_tensor);
+#endif
+
+	xfree(d);
+}
+
+const struct operator_s* operator_zsub_create2(unsigned int N, const long dims[N], const long strs[N], complex float* t)
+{
+
+	PTR_ALLOC(struct zsub_s, data);
+	SET_TYPEID(zsub_s, data);
+
+    data->codomain = iovec_create2(N, dims, strs, CFL_SIZE);
+    data->tensor=t;
+
+    data->tensor = t;
+#ifdef USE_CUDA
+	data->gpu_tensor = NULL; 
+#endif
+
+    return operator_create(N, dims, N, dims,
+	CAST_UP(PTR_PASS(data)), zsub_apply, zsub_free);
+}
+
+const struct operator_s* operator_zsub_create(unsigned int N, const long dims[N], complex float* t)
+{
+    return operator_zsub_create2(N, dims, MD_STRIDES(N, dims, CFL_SIZE), t);
 }

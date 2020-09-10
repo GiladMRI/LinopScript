@@ -11,5 +11,7 @@ extern void grad_adjoint(unsigned int D, const long dims[__VLA(D)], unsigned int
 
 extern struct linop_s* linop_grad_create(long N, const long dims[__VLA(N)], unsigned int flags);
 
+extern struct linop_s* linop_gradm_create(long N, const long dims[__VLA(N)], unsigned int flags);
+
 #include "misc/cppwrap.h"
 

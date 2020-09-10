@@ -97,7 +97,6 @@ const struct operator_s* sense_recon_create(const struct sense_conf* conf, const
 		  const struct linop_s* thresh_funs[num_funs],
 		  const struct operator_s* precond_op)
 {
-	printf("sense_recon_create\n");
 	struct lsqr_conf lsqr_conf = { conf->cclambda, conf->gpu };
 
 	const struct operator_s* op = NULL;
@@ -111,7 +110,6 @@ const struct operator_s* sense_recon_create(const struct sense_conf* conf, const
 	md_copy_dims(DIMS, ksp_dims, linop_codomain(sense_op)->dims);
 
 	if (conf->rvc) {
-		printf("sense_recon_create rvc\n");
 		assert(!conf->bpsense); // FIXME: add rvc as separate constraint or build into forward model earlier
 
 		struct linop_s* rvc = linop_realval_create(DIMS, img_dims);
@@ -123,7 +121,6 @@ const struct operator_s* sense_recon_create(const struct sense_conf* conf, const
 	}
 
 	if (1 < conf->rwiter) {
-		printf("sense_recon_create rwiter\n");
 		assert(!conf->bpsense); // not compatible
 
 		struct linop_s* sampling = linop_sampling_create(dims, pat_dims, pattern);
@@ -148,20 +145,16 @@ const struct operator_s* sense_recon_create(const struct sense_conf* conf, const
 	// Linop script change here
 	if (NULL == pattern) {
 	// if (true) {
-		printf("sense_recon_create pattern\n");
-
-		if (conf->bpsense)
+		// Here with creating the pattern
+		if (conf->bpsense) {
 			op = lsqr2_create(&lsqr_conf, italgo, iconf, (const float*)init, NULL, NULL,
 					num_funs, thresh_op, thresh_funs, NULL);
-		else
+		} else { // This actually run in picsS
 			op = lsqr2_create(&lsqr_conf, italgo, iconf, (const float*)init, sense_op, precond_op,
-					num_funs, thresh_op, thresh_funs, NULL);
+					num_funs, thresh_op, thresh_funs, NULL);	}
 
 		linop_free(sense_op);
-
 	} else {
-		printf("sense_recon_create weights\n");
-
 		assert(!conf->bpsense); // pattern should be built into forward model
 
 		complex float* weights = md_alloc(DIMS, pat_dims, CFL_SIZE);

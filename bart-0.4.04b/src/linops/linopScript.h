@@ -14,6 +14,12 @@
 
 #include "linops/linop.h"
 
+
+#define MAX_LINOPS 20
+#define MAX_LINSCRIPTS 20
+#define MAX_FILES 10
+#define MAX_TENSORS_BYSLICE 10
+
 extern TYPEID linop_data_s;
 
 typedef void (*lop_fun_t)(const linop_data_t* _data, complex float* dst, const complex float* src);
@@ -25,10 +31,19 @@ struct operator_p_s;
 
 struct linop_s;
 
+long getLinopOutCounter();
+const struct linop_s** getLinopsOutVec();
+void FreeOutLinops();
+const struct linop_s* getLinopOut(long n);
+
 long * getFdims(long i);
 complex float* getDataFile(long i);
 
-const struct linop_s* getLinopScriptFromFile(const char *FN, long CurDims[]);
+const struct linop_s* getLinopScriptFromFile(const char *FN, const complex float* InDimsC, long nInSets);
+void FreeLinops();
+void ReadScriptFiles(char* argv[],long n);
+void ReadScriptFiles_gpu(char* argv[],long n);
+void ClearReadScriptFiles( char* argv[],long n);
 
 #include "misc/cppwrap.h"
 

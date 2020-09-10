@@ -65,15 +65,33 @@ static void softthresh_apply(const operator_data_t* _data, float mu, complex flo
 {
 	const auto data = CAST_DOWN(thresh_s, _data);
 
+	debug_printf(DP_INFO, "softthresh_apply\n");
+
 	if (0. == mu) {
 
 		md_copy(data->D, data->dim, optr, iptr, CFL_SIZE);
+
+		if(getCurRegulaizerCostNoLambda()<0.0f) {
+			complex float* tmp_norm = md_alloc_sameplace(data->D, data->norm_dim, CFL_SIZE, optr);
+			md_zrss(data->D, data->dim, data->flags, tmp_norm, iptr);
+			float CurCost=md_z1norm(data->D, data->norm_dim, tmp_norm);
+			debug_printf(DP_INFO, "softthresh_apply Reg cost %f\n",CurCost);
+			setCurRegulaizerCostNoLambda(CurCost);
+			md_free(tmp_norm);
+		}
 
 	} else {
 
 		complex float* tmp_norm = md_alloc_sameplace(data->D, data->norm_dim, CFL_SIZE, optr);
 		md_zsoftthresh_core2(data->D, data->dim, data->lambda * mu, data->flags, tmp_norm, data->str, optr, data->str, iptr);
 
+		if(getCurRegulaizerCostNoLambda()<0.0f) {
+			md_zrss(data->D, data->dim, data->flags, tmp_norm, iptr);
+			float CurCost=md_z1norm(data->D, data->norm_dim, tmp_norm);
+			debug_printf(DP_INFO, "softthresh_apply Reg cost %f\n",CurCost);
+			setCurRegulaizerCostNoLambda(CurCost);
+		}
+		
 		md_free(tmp_norm);
 	}
 }

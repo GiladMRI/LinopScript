@@ -37,6 +37,7 @@
 #include <stdbool.h>
 #include <assert.h>
 
+#include "num/flpmath.h"
 #include "num/ops.h"
 
 #include "misc/debug.h"
@@ -175,6 +176,32 @@ void admm(const struct admm_plan_s* plan,
 	struct iter_op_s Aop,
 	struct iter_monitor_s* monitor)
 {
+	/*debug_printf(DP_INFO,"ADMM -----\n");
+	debug_printf(DP_INFO,"Hogwild %d\n",plan->hogwild);
+	debug_printf(DP_INFO,"dynamic_rho %d\n",plan->dynamic_rho);
+	debug_printf(DP_INFO,"dynamic_tau %d\n",plan->dynamic_tau);
+	debug_printf(DP_INFO,"relative_norm %d\n",plan->relative_norm);
+	debug_printf(DP_INFO,"do_warmstart %d\n",plan->do_warmstart);
+	debug_printf(DP_INFO,"fast %d\n",plan->fast);
+
+	debug_printf(DP_INFO,"maxiter %d\n",plan->maxiter);
+	debug_printf(DP_INFO,"maxitercg %d\n",plan->maxitercg);
+
+	debug_printf(DP_INFO,"cg_eps %f\n",plan->cg_eps);
+	debug_printf(DP_INFO,"ABSTOL %f\n",plan->ABSTOL);
+	debug_printf(DP_INFO,"RELTOL %f\n",plan->RELTOL);
+	debug_printf(DP_INFO,"rho %f\n",plan->rho);
+	debug_printf(DP_INFO,"alpha %f\n",plan->alpha);
+	debug_printf(DP_INFO,"tau %f\n",plan->tau);
+	debug_printf(DP_INFO,"tau_max %f\n",plan->tau_max);
+	debug_printf(DP_INFO,"mu %f\n",plan->mu);
+	
+	if(plan->fast) {
+		debug_printf(DP_INFO,"fast\n");
+	} 	else {
+		debug_printf(DP_INFO,"not fast\n");
+	}*/
+
 	unsigned int num_funs = D;
 
 
@@ -325,6 +352,12 @@ void admm(const struct admm_plan_s* plan,
 			for (unsigned int j = 0; j < num_funs; j++)
 				vops->clear(z_dims[j], r[j]);
 		}
+
+		float tmp=getCurRegulaizerCostNoLambda();
+		if(getCurRegulaizerCostNoLambda()>0.0f) {
+			setCurRegulaizerCostNoLambda(-1.0f);
+		}
+		debug_printf(DP_DEBUG1, "ADMM: calling proximals %f\n",tmp);
 
 
 		// z_j prox

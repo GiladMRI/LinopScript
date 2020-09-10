@@ -727,6 +727,7 @@ static void* gpu_constant(const void* vp, size_t size)
  */
 void md_fill2(unsigned int D, const long dim[D], const long str[D], void* ptr, const void* iptr, size_t size)
 {
+	// debug_printf(DP_DEBUG2,"md_fill2\n");
 #ifdef USE_CUDA
 	if (cuda_ondevice(ptr) && (!cuda_ondevice(iptr))) {
 
@@ -742,6 +743,7 @@ void md_fill2(unsigned int D, const long dim[D], const long str[D], void* ptr, c
 	long istr[D];
 	md_singleton_strides(D, istr);
 
+	// debug_printf(DP_DEBUG2,"md_fill2 x\n");
 	md_copy2(D, dim, str, ptr, istr, iptr, size);
 }
 
@@ -1726,6 +1728,18 @@ void* md_gpu_move(unsigned int D, const long dims[D], const void* ptr, size_t si
 	md_copy(D, dims, gpu_ptr, ptr, size);
 
 	return gpu_ptr;
+}
+
+void* md_cpu_move(unsigned int D, const long dims[D], const void* ptr, size_t size)
+{
+	if (NULL == ptr)
+		return NULL;
+
+	void* cpu_ptr = md_alloc(D, dims, size);
+
+	md_copy(D, dims, cpu_ptr, ptr, size);
+
+	return cpu_ptr;
 }
 #endif
 

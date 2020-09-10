@@ -16,7 +16,12 @@ extern struct linop_s* linop_rdiag_create(unsigned int N, const long dims[__VLA(
 extern struct linop_s* linop_identity_create(unsigned int N, const long dims[__VLA(N)]);
 
 extern struct linop_s* linop_resize_create(unsigned int N, const long out_dims[__VLA(N)], const long in_dims[__VLA(N)]);
-extern struct linop_s* linop_transpose_create(unsigned int N, const long in_dims[__VLA(N)], const long dim1,const long dim2);
+extern struct linop_s* linop_reshape_create(unsigned int A, const long out_dims[__VLA(A)], int B, const long in_dims[__VLA(B)]);
+extern struct linop_s* linop_extract_create(unsigned int N, const long pos[N], const long out_dims[N], const long in_dims[N]);
+extern struct linop_s* linop_transpose_create(int N, int a, int b, const long dims[N]);
+// extern struct linop_s* linop_transpose_create(unsigned int N, const long in_dims[__VLA(N)], const long dim1,const long dim2);
+struct linop_s* linop_applyBySlice_create(int N, const long dims[N], int WhichDim, const struct linop_s* opPerSlice,
+											complex float* dataFilesx[], const long tstrs[], const struct linop_s* Opsx[], long nTnsrs);
 
 extern struct linop_s* linop_fft_create(int N, const long dims[__VLA(N)], unsigned int flags);
 extern struct linop_s* linop_ifft_create(int N, const long dims[__VLA(N)], unsigned int flags);

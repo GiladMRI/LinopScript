@@ -101,7 +101,7 @@ int main_nufft(int argc, char* argv[])
 		if (0 == md_calc_size(3, coilim_dims)) {
 
 			estimate_im_dims(DIMS, FFT_FLAGS, coilim_dims, traj_dims, traj);
-			debug_printf(DP_INFO, "Est. image size: %ld %ld %ld\n", coilim_dims[0], coilim_dims[1], coilim_dims[2]);
+			// debug_printf(DP_INFO, "Est. image size: %ld %ld %ld\n", coilim_dims[0], coilim_dims[1], coilim_dims[2]);
 		}
 
 		md_copy_dims(DIMS - 3, coilim_dims + 3, ksp_dims + 3);
@@ -169,7 +169,7 @@ int main_nufft(int argc, char* argv[])
 
 	unmap_cfl(DIMS, traj_dims, traj);
 
-	debug_printf(DP_INFO, "Done.\n");
+	// debug_printf(DP_INFO, "Done.\n");
 	return 0;
 }
 

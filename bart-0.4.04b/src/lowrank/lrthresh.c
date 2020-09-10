@@ -187,11 +187,24 @@ static int rand_lim(int limit)
 /*
  * Low rank threhsolding for arbitrary block sizes
  */
-static void lrthresh_apply(const operator_data_t* _data, float mu, complex float* dst, const complex float* src)
+static void lrthresh_apply(const operator_data_t* _data, float mu, complex float* dsta, const complex float* srca)
 {
 	auto data = CAST_DOWN(lrthresh_data_s, _data);
 
-	debug_printf(DP_INFO,"lrthresh_apply\n");
+	// debug_printf(DP_INFO,"lrthresh_apply\n");
+
+	complex float* src=srca;
+	complex float* dst=dsta;
+#ifdef USE_CUDA
+    if(cuda_ondevice(srca)) { // ggg
+    	debug_printf(DP_DEBUG3,"Moving to CPU\n");
+
+		src = md_alloc(DIMS, data->dims, CFL_SIZE);
+		dst = md_alloc(DIMS, data->dims, CFL_SIZE);
+
+		md_copy(DIMS, data->dims, src, srca, CFL_SIZE);
+	}
+#endif
 
 	unsigned long mflags;
 	// unsigned long flags;
@@ -305,7 +318,7 @@ static void lrthresh_apply(const operator_data_t* _data, float mu, complex float
 
 		debug_printf(DP_DEBUG4, "M=%d, N=%d, B=%d, num_blocks=%d, img_size=%d, blk_size=%d\n", M, N, B, num_blocks, img_size, blk_size);
 
-		debug_printf(DP_INFO, "M=%d, N=%d, B=%d, num_blocks=%d, img_size=%d, blk_size=%d option %d\n", M, N, B, num_blocks, img_size, blk_size,data->option);
+		debug_printf(DP_DEBUG3, "M=%d, N=%d, B=%d, num_blocks=%d, img_size=%d, blk_size=%d option %d\n", M, N, B, num_blocks, img_size, blk_size,data->option);
 		// debug_print_dims(DP_INFO,DIMS,blkdims);
 
 		// batch_svthresh(M, N, num_blocks, lambda * GWIDTH(M, N, B), *(complex float (*)[mat2_dims[1]][M][N])tmp_mat2);
@@ -334,6 +347,15 @@ static void lrthresh_apply(const operator_data_t* _data, float mu, complex float
 		md_free(tmp);
 		md_free(tmp_mat);
 	}
+
+#ifdef USE_CUDA
+    if(cuda_ondevice(srca)) {
+    	debug_printf(DP_DEBUG3,"Moving back to GPU\n");
+		md_copy(DIMS, data->dims, dsta, dst, CFL_SIZE);
+		md_free(src);
+		md_free(dst);
+	}
+#endif
 }
 
 

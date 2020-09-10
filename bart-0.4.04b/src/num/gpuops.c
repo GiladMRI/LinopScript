@@ -73,6 +73,8 @@ int cuda_devices(void)
 
 static __thread int last_init = -1;
 
+int cuda_lastinit() { return last_init; }
+
 void cuda_p2p_table(int n, bool table[n][n])
 {
 	assert(n == cuda_devices());

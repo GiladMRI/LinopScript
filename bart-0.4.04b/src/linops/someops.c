@@ -326,6 +326,178 @@ struct linop_s* linop_resizeBase_create(unsigned int N, const long out_dims[N], 
 	return linop_create(N, out_dims, N, in_dims, CAST_UP(PTR_PASS(data)), resizeBase_forward, resizeBase_adjoint, resizeBase_normal, NULL, resize_free);
 }
 
+struct extract_op_s {
+
+	INTERFACE(linop_data_t);
+
+	int N;
+	const long* pos;
+	const long* in_dims;
+	const long* out_dims;
+};
+
+static DEF_TYPEID(extract_op_s);
+
+static void extract_forward(const linop_data_t* _data, complex float* dst, const complex float* src)
+{
+	const auto data = CAST_DOWN(extract_op_s, _data);
+
+	md_clear(data->N, data->out_dims, dst, CFL_SIZE);
+	md_copy_block(data->N, data->pos, data->out_dims, dst, data->in_dims, src, CFL_SIZE);
+}
+
+static void extract_adjoint(const linop_data_t* _data, complex float* dst, const complex float* src)
+{
+	const auto data = CAST_DOWN(extract_op_s, _data);
+
+	md_clear(data->N, data->in_dims, dst, CFL_SIZE);
+	md_copy_block(data->N, data->pos, data->in_dims, dst, data->out_dims, src, CFL_SIZE);
+}
+
+static void extract_free(const linop_data_t* _data)
+{
+	const auto data = CAST_DOWN(extract_op_s, _data);
+
+	xfree(data->out_dims);
+	xfree(data->in_dims);
+	xfree(data->pos);
+
+	xfree(data);
+}
+
+extern struct linop_s* linop_extract_create(unsigned int N, const long pos[N], const long out_dims[N], const long in_dims[N])
+{
+	PTR_ALLOC(struct extract_op_s, data);
+	SET_TYPEID(extract_op_s, data);
+
+	data->N = N;
+	data->pos = *TYPE_ALLOC(long[N]);
+	data->out_dims = *TYPE_ALLOC(long[N]);
+	data->in_dims = *TYPE_ALLOC(long[N]);
+
+	md_copy_dims(N, (long*)data->pos, pos);
+	md_copy_dims(N, (long*)data->out_dims, out_dims);
+	md_copy_dims(N, (long*)data->in_dims, in_dims);
+
+	return linop_create(N, out_dims, N, in_dims, CAST_UP(PTR_PASS(data)), extract_forward, extract_adjoint, NULL, NULL, extract_free);
+}
+
+
+
+
+
+struct reshape_op_s {
+
+	INTERFACE(linop_data_t);
+
+	unsigned int N;
+	const long* dims;
+};
+
+static DEF_TYPEID(reshape_op_s);
+
+static void reshape_forward(const linop_data_t* _data, complex float* dst, const complex float* src)
+{
+	const struct reshape_op_s* data = CAST_DOWN(reshape_op_s, _data);
+
+	md_copy(data->N, data->dims, dst, src, CFL_SIZE);
+}
+
+static void reshape_free(const linop_data_t* _data)
+{
+	const struct reshape_op_s* data = CAST_DOWN(reshape_op_s, _data);
+
+	xfree(data->dims);
+
+	xfree(data);
+}
+
+
+struct linop_s* linop_reshape_create(unsigned int A, const long out_dims[A], int B, const long in_dims[B])
+{
+	PTR_ALLOC(struct reshape_op_s, data);
+	SET_TYPEID(reshape_op_s, data);
+
+	assert(md_calc_size(A, out_dims) == md_calc_size(B, in_dims));
+
+	unsigned int N = A;
+	data->N = N;
+	long* dims = *TYPE_ALLOC(long[N]);
+	md_copy_dims(N, dims, out_dims);
+	data->dims = dims;
+
+	return linop_create(A, out_dims, B, in_dims, CAST_UP(PTR_PASS(data)), reshape_forward, reshape_forward, reshape_forward, NULL, reshape_free);
+}
+
+
+
+struct transpose_op_s {
+
+	INTERFACE(linop_data_t);
+
+	int N;
+	int a;
+	int b;
+	const long* dims;
+};
+
+static DEF_TYPEID(transpose_op_s);
+
+static void transpose_forward(const linop_data_t* _data, complex float* dst, const complex float* src)
+{
+	auto data = CAST_DOWN(transpose_op_s, _data);
+
+	long odims[data->N];
+	md_copy_dims(data->N, odims, data->dims);
+	odims[data->a] = data->dims[data->b];
+	odims[data->b] = data->dims[data->a];
+
+	md_transpose(data->N, data->a, data->b, odims, dst, data->dims, src, CFL_SIZE);
+}
+
+static void transpose_normal(const linop_data_t* _data, complex float* dst, const complex float* src)
+{
+	auto data = CAST_DOWN(transpose_op_s, _data);
+
+	md_copy(data->N, data->dims, dst, src, CFL_SIZE);
+}
+
+static void transpose_free(const linop_data_t* _data)
+{
+	auto data = CAST_DOWN(transpose_op_s, _data);
+
+	xfree(data->dims);
+
+	xfree(data);
+}
+
+
+struct linop_s* linop_transpose_create(int N, int a, int b, const long dims[N])
+{
+	assert((0 <= a) && (a < N));
+	assert((0 <= b) && (b < N));
+	assert(a != b);
+
+	PTR_ALLOC(struct transpose_op_s, data);
+	SET_TYPEID(transpose_op_s, data);
+
+	data->N = N;
+	data->a = a;
+	data->b = b;
+
+	long* idims = *TYPE_ALLOC(long[N]);
+	md_copy_dims(N, idims, dims);
+	data->dims = idims;
+
+	long odims[N];
+	md_copy_dims(N, odims, dims);
+	odims[a] = idims[b];
+	odims[b] = idims[a];
+
+	return linop_create(N, odims, N, idims, CAST_UP(PTR_PASS(data)), transpose_forward, transpose_forward, transpose_normal, NULL, transpose_free);
+}
+
+
 struct operator_matrix_s {
 
 	INTERFACE(linop_data_t);
@@ -1068,71 +1240,71 @@ struct linop_s* linop_conv_create(int N, unsigned int flags, enum conv_type ctyp
 
 
 
-struct transpose_op_s {
+// struct transpose_op_s {
 
-	INTERFACE(linop_data_t);
+// 	INTERFACE(linop_data_t);
 
-	unsigned int N;
-	const long* out_dims;
-	const long* in_dims;
+// 	unsigned int N;
+// 	const long* out_dims;
+// 	const long* in_dims;
 
-	unsigned int dim1;
-	unsigned int dim2;
-};
+// 	unsigned int dim1;
+// 	unsigned int dim2;
+// };
 
-static DEF_TYPEID(transpose_op_s);
+// static DEF_TYPEID(transpose_op_s);
 
-static void transpose_forward(const linop_data_t* _data, complex float* dst, const complex float* src)
-{
-	const auto data = CAST_DOWN(transpose_op_s, _data);
+// static void transpose_forward(const linop_data_t* _data, complex float* dst, const complex float* src)
+// {
+// 	const auto data = CAST_DOWN(transpose_op_s, _data);
 
-	md_transpose(data->N, data->dim1, data->dim2, data->out_dims, dst, data->in_dims, src, CFL_SIZE);
-}
+// 	md_transpose(data->N, data->dim1, data->dim2, data->out_dims, dst, data->in_dims, src, CFL_SIZE);
+// }
 
-static void transpose_normal(const linop_data_t* _data, complex float* dst, const complex float* src)
-{
-	const auto data = CAST_DOWN(transpose_op_s, _data);
+// static void transpose_normal(const linop_data_t* _data, complex float* dst, const complex float* src)
+// {
+// 	const auto data = CAST_DOWN(transpose_op_s, _data);
 
-	md_copy(data->N, data->in_dims, dst, src, CFL_SIZE);
-}
+// 	md_copy(data->N, data->in_dims, dst, src, CFL_SIZE);
+// }
 
-static void transpose_free(const linop_data_t* _data)
-{
-	const auto data = CAST_DOWN(transpose_op_s, _data);
+// static void transpose_free(const linop_data_t* _data)
+// {
+// 	const auto data = CAST_DOWN(transpose_op_s, _data);
 
-	xfree(data->out_dims);
-	xfree(data->in_dims);
+// 	xfree(data->out_dims);
+// 	xfree(data->in_dims);
 
-	xfree(data);
-}
+// 	xfree(data);
+// }
 
 
-/**
- * Create a transpose linear operator:
- *
- * @param N number of dimensions
- * @param out_dims output dimensions
- * @param in_dims input dimensions
- */
-struct linop_s* linop_transpose_create(unsigned int N, const long in_dims[N], const long dim1,const long dim2)
-{
-	PTR_ALLOC(struct transpose_op_s, data);
-	SET_TYPEID(transpose_op_s, data);
+// /**
+//  * Create a transpose linear operator:
+//  *
+//  * @param N number of dimensions
+//  * @param out_dims output dimensions
+//  * @param in_dims input dimensions
+//  */
+// struct linop_s* linop_transpose_create(unsigned int N, const long in_dims[N], const long dim1,const long dim2)
+// {
+// 	PTR_ALLOC(struct transpose_op_s, data);
+// 	SET_TYPEID(transpose_op_s, data);
 
-	long out_dims[N];
+// 	long out_dims[N];
 
-	data->N = N;
-	data->out_dims = *TYPE_ALLOC(long[N]);
-	data->in_dims = *TYPE_ALLOC(long[N]);
-	data->dim1=dim1;
-	data->dim2=dim2;
+// 	data->N = N;
+// 	data->out_dims = *TYPE_ALLOC(long[N]);
+// 	data->in_dims = *TYPE_ALLOC(long[N]);
+// 	data->dim1=dim1;
+// 	data->dim2=dim2;
 	
-	md_copy_dims(N, (long*)data->in_dims, in_dims);
-	md_transpose_dims(N, dim1, dim2, out_dims, in_dims);
-	md_copy_dims(N, (long*)data->out_dims, out_dims);
+// 	md_copy_dims(N, (long*)data->in_dims, in_dims);
+// 	md_transpose_dims(N, dim1, dim2, out_dims, in_dims);
+// 	md_copy_dims(N, (long*)data->out_dims, out_dims);
 	
-	return linop_create(N, out_dims, N, in_dims, CAST_UP(PTR_PASS(data)), transpose_forward, transpose_forward, transpose_normal, NULL, transpose_free);
-}
+// 	return linop_create(N, out_dims, N, in_dims, CAST_UP(PTR_PASS(data)), transpose_forward, transpose_forward, transpose_normal, NULL, transpose_free);
+// }
 
 
 
@@ -1154,9 +1326,14 @@ static void print_forward(const linop_data_t* _data, complex float* dst, const c
 	const auto data = CAST_DOWN(print_data_s, _data);
 	const struct iovec_s* domain = data->domain;
 
-	debug_printf(DP_WARN, "Linop print Forward %ld :", data->messageId);
+	debug_printf(DP_INFO, "Linop print Forward %ld : ", data->messageId);
+	if(cuda_ondevice(src)) { debug_printf(DP_INFO,"GPU"); } else { debug_printf(DP_INFO,"CPU"); }
+	debug_printf(DP_INFO, " -> ");
+	if(cuda_ondevice(dst)) { debug_printf(DP_INFO,"GPU"); } else { debug_printf(DP_INFO,"CPU"); }
+	debug_printf(DP_INFO, " ");
+	
 	debug_print_dims(DP_INFO, domain->N, domain->dims);
-
+	
 	md_copy2(domain->N, domain->dims, domain->strs, dst, domain->strs, src, CFL_SIZE);
 }
 
@@ -1165,8 +1342,15 @@ static void print_adjoint(const linop_data_t* _data, complex float* dst, const c
 	const auto data = CAST_DOWN(print_data_s, _data);
 	const struct iovec_s* domain = data->domain;
 
-	debug_printf(DP_WARN, "Linop print Adjoint %ld :", data->messageId);
+	debug_printf(DP_INFO, "Linop print Adjoint %ld : ", data->messageId);
+
+	if(cuda_ondevice(src)) { debug_printf(DP_INFO,"GPU"); } else { debug_printf(DP_INFO,"CPU"); }
+	debug_printf(DP_INFO, " -> ");
+	if(cuda_ondevice(dst)) { debug_printf(DP_INFO,"GPU"); } else { debug_printf(DP_INFO,"CPU"); }
+	debug_printf(DP_INFO, " ");
+
 	debug_print_dims(DP_INFO, domain->N, domain->dims);
+
 
 
 	md_copy2(domain->N, domain->dims, domain->strs, dst, domain->strs, src, CFL_SIZE);
@@ -1177,7 +1361,12 @@ static void print_normal(const linop_data_t* _data, complex float* dst, const co
 	const auto data = CAST_DOWN(print_data_s, _data);
 	const struct iovec_s* domain = data->domain;
 
-	debug_printf(DP_WARN, "Linop print Normal %ld :", data->messageId);
+	debug_printf(DP_INFO, "Linop print Normal  %ld : ", data->messageId);
+	if(cuda_ondevice(src)) { debug_printf(DP_INFO,"GPU"); } else { debug_printf(DP_INFO,"CPU"); }
+	debug_printf(DP_INFO, " -> ");
+	if(cuda_ondevice(dst)) { debug_printf(DP_INFO,"GPU"); } else { debug_printf(DP_INFO,"CPU"); }
+	debug_printf(DP_INFO, " ");
+
 	debug_print_dims(DP_INFO, domain->N, domain->dims);
 
 	md_copy2(domain->N, domain->dims, domain->strs, dst, domain->strs, src, CFL_SIZE);
@@ -1222,4 +1411,174 @@ struct linop_s* linop_print_create(unsigned int N, const long dims[N], long mess
 	debug_printf(DP_WARN, "Linop print create %ld\n", messageId);
 
 	return linop_create(N, dims, N, dims, CAST_UP(PTR_PASS(data)), print_forward, print_adjoint, print_normal, print_pinv, print_free);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct applyBySlice_op_s {
+
+	INTERFACE(linop_data_t);
+
+	long nSlices;
+	long N;
+	long whichDim;
+	long istr;
+	long ostr;
+	long nTnsrs;
+
+	const struct linop_s* opPerSlice;
+
+	complex float** Tensors;
+	struct linop_s** Opsx;
+	long *tstrs;
+};
+
+static DEF_TYPEID(applyBySlice_op_s);
+
+#define BYSLICE_DBG_LVL DP_DEBUG4
+// #define BYSLICE_DBG_LVL DP_INFO
+static void applyBySlice_forward(const linop_data_t* _data, complex float* dst, const complex float* src)
+{
+	auto data = CAST_DOWN(applyBySlice_op_s, _data);
+
+	debug_printf(BYSLICE_DBG_LVL, "Byslice Forward %ld slices\n", data->nSlices);
+	
+	long t;
+	for(long i=0;i<data->nSlices;i++) {
+		for(long t=0;t<data->nTnsrs;t++) {
+			// debug_printf(BYSLICE_DBG_LVL, "BySlice Frwrd Slc %ld/%ld tnsr %ld/%ld\n", i,data->nSlices,t,data->nTnsrs);
+			// debug_printf(DP_DEBUG3, "AAX %ld\n", data->Opsx[t]);
+			// debug_printf(DP_DEBUG3, "AAY %ld\n", data->Tensors[t]);
+			// complex float* ten=&data->Tensors[t][i*data->tstrs[t]];
+			// debug_printf(DP_DEBUG3, "AAYB %ld\n", ten);
+			set_fmac_tensor(data->Opsx[t], &data->Tensors[t][i*data->tstrs[t]]);
+			// set_fmac_tensor(data->Opsx[t], ten);
+			// debug_printf(DP_DEBUG3, "AAZ %ld\n", data->Tensors[t]);
+		}
+		
+		// debug_printf(DP_DEBUG3, "BB %ld\n", i);
+		operator_apply(	data->opPerSlice->forward,	data->N, linop_codomain(data->opPerSlice)->dims, &dst[i*data->ostr],
+													data->N, linop_domain(data->opPerSlice)->dims, &src[i*data->istr]); }
+
+	debug_printf(BYSLICE_DBG_LVL, "Byslice Forward end %ld slices\n", data->nSlices);
+}
+
+static void applyBySlice_adjoint(const linop_data_t* _data, complex float* dst, const complex float* src)
+{
+	const auto data = CAST_DOWN(applyBySlice_op_s, _data);
+
+	debug_printf(BYSLICE_DBG_LVL, "Byslice adjoint %ld slices\n", data->nSlices);
+
+	for(long i=0;i<data->nSlices;i++) {
+		for(long t=0;t<data->nTnsrs;t++) {
+			set_fmac_tensor(data->Opsx[t], &data->Tensors[t][i*data->tstrs[t]]);		}
+
+		operator_apply(	data->opPerSlice->adjoint,	data->N, linop_domain(data->opPerSlice)->dims, &dst[i*data->istr],
+													data->N, linop_codomain(data->opPerSlice)->dims, &src[i*data->ostr]); }
+
+	debug_printf(BYSLICE_DBG_LVL, "Byslice adjoint end %ld slices\n", data->nSlices);
+}
+
+static void applyBySlice_normal(const linop_data_t* _data, complex float* dst, const complex float* src)
+{
+	auto data = CAST_DOWN(applyBySlice_op_s, _data);
+
+	debug_printf(BYSLICE_DBG_LVL, "Byslice normal %ld slices\n", data->nSlices);
+
+	for(long i=0;i<data->nSlices;i++) {
+		for(long t=0;t<data->nTnsrs;t++) {
+			// debug_printf(DP_DEBUG3, "BySlice Nrml Slc %ld/%ld tnsr %ld/%ld\n", i,data->nSlices,t,data->nTnsrs);
+			set_fmac_tensor(data->Opsx[t], &data->Tensors[t][i*data->tstrs[t]]);		}
+
+		operator_apply(	data->opPerSlice->normal,	data->N, linop_domain(data->opPerSlice)->dims, &dst[i*data->istr],
+													data->N, linop_domain(data->opPerSlice)->dims, &src[i*data->istr]); }
+
+	debug_printf(BYSLICE_DBG_LVL, "Byslice normal end %ld slices\n", data->nSlices);
+}
+
+static void applyBySlice_free(const linop_data_t* _data)
+{
+	auto data = CAST_DOWN(applyBySlice_op_s, _data);
+
+	linop_free(data->opPerSlice);
+
+	for(long i=0;i<data->nTnsrs;i++) {
+		md_free(data->Tensors[i]);
+	}
+
+	if(data->nTnsrs>0) {
+		xfree(data->Tensors);
+		xfree(data->Opsx);
+		xfree(data->tstrs);
+	}
+	
+	xfree(data);
+}
+
+struct linop_s* linop_applyBySlice_create(int N, const long dims[N], int WhichDim, const struct linop_s* opPerSlice,
+											complex float* dataFilesx[], const long tstrs[], const struct linop_s* Opsx[], long nTnsrs)
+{
+	PTR_ALLOC(struct applyBySlice_op_s, data);
+	SET_TYPEID(applyBySlice_op_s, data);
+
+	debug_printf(DP_DEBUG1,"linop_applyBySlice_create start. #Tensors: %ld\n",nTnsrs);
+
+	long nSlices=dims[WhichDim];
+
+	long strs[N];
+    md_calc_strides(N, strs, dims, CFL_SIZE);
+
+    long BaseOpDims[N];
+    md_copy_dims(N, BaseOpDims, linop_domain(opPerSlice)->dims);
+    long BaseOpSlices=BaseOpDims[WhichDim];
+
+    long odims[N];
+    md_copy_dims(N, odims, linop_codomain(opPerSlice)->dims);
+    odims[WhichDim]=nSlices;
+
+    long ostrs[N];
+    md_calc_strides(N, ostrs, odims, CFL_SIZE);
+    
+	data->istr = strs[WhichDim]*BaseOpSlices/CFL_SIZE;
+	data->ostr = ostrs[WhichDim]*BaseOpSlices/CFL_SIZE;
+	data->nSlices = nSlices/BaseOpSlices;
+	data->opPerSlice = opPerSlice;
+	data->N=N;
+
+	data->nTnsrs=nTnsrs;
+
+	if(nTnsrs>0) {
+		PTR_ALLOC(long[nTnsrs], ptstrs);
+	
+		data->Tensors = xmalloc(sizeof(complex float*) * nTnsrs);
+		data->Opsx = xmalloc(sizeof(struct linop_s*) * nTnsrs);
+		data->tstrs = *PTR_PASS(ptstrs);
+		
+		for(long i=0;i<nTnsrs;i++) {
+	    	data->tstrs[i]=tstrs[i]*BaseOpSlices;
+			data->Opsx[i]=Opsx[i];
+			if(cuda_ondevice(dataFilesx[i])) {
+				data->Tensors[i]=dataFilesx[i];
+			} else {
+				debug_printf(DP_ERROR, "dataFilesx[%ld] not on GPU\n", i);
+				exit(EXIT_SUCCESS);
+	    		return 0;
+			}
+		}
+	}
+
+	debug_printf(DP_DEBUG1,"linop_applyBySlice_create: #Slices %ld Base #slices %ld\n",nSlices,BaseOpSlices);
+
+
+	return linop_create(N, odims, N, dims, CAST_UP(PTR_PASS(data)), applyBySlice_forward, applyBySlice_adjoint, applyBySlice_normal, NULL, applyBySlice_free);
 }

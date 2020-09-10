@@ -24,6 +24,7 @@
 #include "iter/thresh.h"
 
 #include "linops/linop.h"
+#include "linops/fmac.h"
 #include "linops/someops.h"
 #include "linops/grad.h"
 #include "linops/sum.h"
@@ -40,6 +41,7 @@
 
 #include "optreg.h"
 
+#include "linops/linopScript.h"
 
 #define CFL_SIZE sizeof(complex float)
 
@@ -57,15 +59,21 @@ void help_reg(void)
 			"-R Q:C    \tl2-norm in image domain\n"
 			"-R I:B:C  \tl1-norm in image domain\n"
 			"-R W:A:B:C\tl1-wavelet\n"
-		        "-R N:A:B:C\tNormalized Iterative Hard Thresholding (NIHT), image domain\n"
+		    "-R N:A:B:C\tNormalized Iterative Hard Thresholding (NIHT), image domain\n"
 		        "\t\tC is an integer percentage, i.e. from 0-100\n"
 		        "-R H:A:B:C\tNIHT, wavelet domain\n"
 			"-R F:A:B:C\tl1-Fourier\n"
 			"-R T:A:B:C\ttotal variation\n"
+			"-R D:A:B:C\tL2 finite differences\n"
 			"-R T:7:0:.01\t3D isotropic total variation with 0.01 regularization.\n"
 			"-R L:7:7:.02\tLocally low rank with spatial decimation and 0.02 regularization.\n"
 			"-R M:7:7:.03\tMulti-scale low rank with spatial decimation and 0.03 regularization.\n"
 			"-R K:7:7:.03:HankelizationK:BlkSize:Option:Dim\tHankelized low-rank.\n"
+			"-- for linop Script\n"
+			"-R 1:B:C\tl1-norm\n"
+			"-R 2:C\tl2-norm\n"
+			"-R 3:A:B:C:BlkSize\tl1-schatten-norm with locality (LLR)\n"
+			"TV and wavelet (T,W) are also linopScript supported by chaining\n"
 	      );
 }
 
@@ -122,6 +130,27 @@ bool opt_reg(void* ptr, char c, const char* optarg)
 			int ret = sscanf(optarg, "%*[^:]:%d:%d:%f:%d:%d:%d:%d", &regs[r].xflags, &regs[r].jflags, &regs[r].lambda,&regs[r].k,&regs[r].q,&regs[r].k2,&regs[r].k3);
 			assert(7 == ret);
 		}
+		else if (strcmp(rt, "1") == 0) {
+
+			regs[r].xform = L1LS;
+			int ret = sscanf(optarg, "%*[^:]:%d:%f", &regs[r].jflags, &regs[r].lambda);
+			assert(2 == ret);
+		}
+		else if (strcmp(rt, "2") == 0) {
+
+			regs[r].xform = L2LS;
+			int ret = sscanf(optarg, "%*[^:]:%f:%d", &regs[r].lambda,&regs[r].k2);
+			assert( (1 == ret) || (ret == 2) );
+			regs[r].xflags = 0u;
+			regs[r].jflags = 0u;
+			if(ret==1) { regs[r].k2=-1; }
+		}
+		else if (strcmp(rt, "3") == 0) {
+
+			regs[r].xform = LRLS;
+			int ret = sscanf(optarg, "%*[^:]:%d:%d:%f:%d", &regs[r].xflags, &regs[r].jflags, &regs[r].lambda,&regs[r].k);
+			assert(4 == ret);
+		}
 		else if (strcmp(rt, "M") == 0) {
 
 			// FIXME: here an explanation is missing
@@ -138,6 +167,12 @@ bool opt_reg(void* ptr, char c, const char* optarg)
 		else if (strcmp(rt, "T") == 0) {
 
 			regs[r].xform = TV;
+			int ret = sscanf(optarg, "%*[^:]:%d:%d:%f", &regs[r].xflags, &regs[r].jflags, &regs[r].lambda);
+			assert(3 == ret);
+		}
+		else if (strcmp(rt, "D") == 0) {
+
+			regs[r].xform = L2FD;
 			int ret = sscanf(optarg, "%*[^:]:%d:%d:%f", &regs[r].xflags, &regs[r].jflags, &regs[r].lambda);
 			assert(3 == ret);
 		}
@@ -178,6 +213,14 @@ bool opt_reg(void* ptr, char c, const char* optarg)
 		else if (strcmp(rt, "Q") == 0) {
 
 			regs[r].xform = L2IMG;
+			int ret = sscanf(optarg, "%*[^:]:%f", &regs[r].lambda);
+			assert(1 == ret);
+			regs[r].xflags = 0u;
+			regs[r].jflags = 0u;
+		}
+		else if (strcmp(rt, "C") == 0) {
+
+			regs[r].xform = L2CH;
 			int ret = sscanf(optarg, "%*[^:]:%f", &regs[r].lambda);
 			assert(1 == ret);
 			regs[r].xflags = 0u;
@@ -286,7 +329,10 @@ void opt_reg_configure(unsigned int N, const long img_dims[N], struct opt_reg_s*
 
 
 	for (int nr = 0; nr < nr_penalties; nr++) {
-
+		// ggg linopScript
+		debug_printf(DP_INFO, "---- Regularizer #%d -------\n",nr);
+		debug_printf(DP_INFO, "---- Linop out counter: %d -------\n",getLinopOutCounter());
+		
 		// fix up regularization parameter
 		if (-1. == regs[nr].lambda)
 			regs[nr].lambda = lambda;
@@ -296,7 +342,7 @@ void opt_reg_configure(unsigned int N, const long img_dims[N], struct opt_reg_s*
 		case L1WAV:
 		{
 
-			debug_printf(DP_INFO, "l1-wavelet regularization: %f\n", regs[nr].lambda);
+			debug_printf(DP_INFO, "l1-wavelet regularization: %f randshift %d\n", regs[nr].lambda,randshift);
 
 
 			long minsize[DIMS] = { [0 ... DIMS - 1] = 1 };
@@ -315,8 +361,15 @@ void opt_reg_configure(unsigned int N, const long img_dims[N], struct opt_reg_s*
 				}
 			}
 
-			trafos[nr] = linop_identity_create(DIMS, img_dims);
-			prox_ops[nr] = prox_wavelet_thresh_create(DIMS, img_dims, wflags, regs[nr].jflags, minsize, regs[nr].lambda, randshift);
+			if(nr>=getLinopOutCounter()-1) {
+				trafos[nr] = linop_identity_create(DIMS, img_dims);
+			} else {
+				debug_printf(DP_INFO, "Using linopScript\n");
+				trafos[nr] = getLinopsOutVec()[nr+1];
+			}
+			//prox_ops[nr] = prox_wavelet_thresh_create(DIMS, img_dims, wflags, regs[nr].jflags, minsize, regs[nr].lambda, randshift);
+			prox_ops[nr] = prox_wavelet_thresh_create(DIMS, linop_codomain(trafos[nr])->dims, wflags, regs[nr].jflags, minsize,
+														regs[nr].lambda, randshift);
 			break;
 		}
 		
@@ -385,10 +438,109 @@ void opt_reg_configure(unsigned int N, const long img_dims[N], struct opt_reg_s*
 		case TV:
 			debug_printf(DP_INFO, "TV regularization: %f\n", regs[nr].lambda);
 
-			trafos[nr] = linop_grad_create(DIMS, img_dims, regs[nr].xflags);
+			/// ggg LinopScript
+			if(nr<getLinopOutCounter()-1) {
+				const struct linop_s* tmp=linop_grad_create(linop_codomain(getLinopsOutVec()[nr+1])->N, linop_codomain(getLinopsOutVec()[nr+1])->dims, regs[nr].xflags);
+				trafos[nr] = linop_chain(getLinopsOutVec()[nr+1],tmp);
+				linop_free(tmp);
+			} else {
+				trafos[nr] = linop_grad_create(DIMS, img_dims, regs[nr].xflags);
+			}
+			
 			prox_ops[nr] = prox_thresh_create(DIMS + 1,
 					linop_codomain(trafos[nr])->dims,
 					regs[nr].lambda, regs[nr].jflags | MD_BIT(DIMS));
+			break;
+
+		case L2FD:
+			debug_printf(DP_INFO, "L2FD regularization: %f\n", regs[nr].lambda);
+
+			/// ggg LinopScript
+			if(nr<getLinopOutCounter()-1) {
+				const struct linop_s* tmp=linop_grad_create(linop_codomain(getLinopsOutVec()[nr+1])->N, linop_codomain(getLinopsOutVec()[nr+1])->dims, regs[nr].xflags);
+				trafos[nr] = linop_chain(getLinopsOutVec()[nr+1],tmp);
+				linop_free(tmp);
+			} else {
+				trafos[nr] = linop_grad_create(DIMS, img_dims, regs[nr].xflags);
+			}
+			
+			/*prox_ops[nr] = prox_thresh_create(DIMS + 1,
+					linop_codomain(trafos[nr])->dims,
+					regs[nr].lambda, regs[nr].jflags | MD_BIT(DIMS));*/
+
+			prox_ops[nr] = prox_leastsquares_create(DIMS + 1,
+							linop_codomain(trafos[nr])->dims, regs[nr].lambda, NULL);
+			break;
+
+		case L1LS:
+			debug_printf(DP_INFO, "L1 regularization (for linopScript): %f\n", regs[nr].lambda);
+
+			// trafos[nr] = linop_grad_create(DIMS, img_dims, regs[nr].xflags);
+
+			if(nr>=getLinopOutCounter()-1) {
+				trafos[nr] = linop_identity_create(DIMS, img_dims);
+			} else {
+				trafos[nr] = getLinopsOutVec()[nr+1];
+			}
+			
+			prox_ops[nr] = prox_thresh_create(linop_codomain(trafos[nr])->N,
+					linop_codomain(trafos[nr])->dims,
+					regs[nr].lambda, regs[nr].jflags);
+			break;
+
+		case L2LS:
+			debug_printf(DP_INFO, "L2 regularization (for linopScript): %f\n", regs[nr].lambda);
+
+			trafos[nr] = linop_grad_create(DIMS, img_dims, regs[nr].xflags);
+
+			if(nr>=getLinopOutCounter()) {
+				trafos[nr] = linop_identity_create(DIMS, img_dims);
+			} else {
+				trafos[nr] = getLinopsOutVec()[nr+1];
+			}
+
+			complex float* Fdata=NULL;
+			if(regs[nr].k2>=0) {
+				debug_printf(DP_INFO, "Using file %d !!!\n", regs[nr].k2);
+				Fdata=getDataFile(regs[nr].k2);
+			}
+
+			prox_ops[nr] = prox_leastsquares_create(linop_codomain(trafos[nr])->N,
+							linop_codomain(trafos[nr])->dims, regs[nr].lambda, Fdata);
+			break;
+
+		case LRLS:
+			debug_printf(DP_INFO, "LR regularization (for linopScript): %f\n", regs[nr].lambda);
+
+			if (use_gpu)
+				error("GPU operation is not currently implemented for lowrank regularization.\n");
+
+			if(nr>=getLinopOutCounter()) {
+				debug_printf(DP_INFO, "NO linop script for this one!\n");
+				trafos[nr] = linop_identity_create(DIMS, img_dims);
+			} else {
+				debug_printf(DP_INFO, "Using linop script #%d\n",nr+1);
+				trafos[nr] = getLinopsOutVec()[nr+1];
+			}
+
+			// add locally lowrank penalty
+			levels = llr_blkdims(blkdims, regs[nr].jflags, linop_codomain(trafos[nr])->dims, regs[nr].k);
+
+			assert(1 == levels);
+
+			assert(levels == img_dims[LEVEL_DIM]);
+
+			for(int l = 0; l < levels; l++)
+#if 0
+				blkdims[l][MAPS_DIM] = img_dims[MAPS_DIM];
+#else
+				blkdims[l][MAPS_DIM] = 1;
+#endif
+
+			int LSremove_mean = 0;
+
+			prox_ops[nr] = lrthresh_create(linop_codomain(trafos[nr])->dims, randshift, regs[nr].xflags,
+							(const long (*)[DIMS])blkdims, regs[nr].lambda, false, LSremove_mean, overlapping_blocks);
 			break;
 
 		case LAPLACE:
@@ -417,8 +569,9 @@ void opt_reg_configure(unsigned int N, const long img_dims[N], struct opt_reg_s*
 
 			debug_printf(DP_INFO, "lowrank regularization: %f\n", regs[nr].lambda);
 
-			if (use_gpu)
-				error("GPU operation is not currently implemented for lowrank regularization.\n");
+			// ggg
+			// if (use_gpu)
+			// 	error("GPU operation is not currently implemented for lowrank regularization.\n");
 
 
 			// add locally lowrank penalty
@@ -445,8 +598,8 @@ void opt_reg_configure(unsigned int N, const long img_dims[N], struct opt_reg_s*
 
 			debug_printf(DP_INFO, "lowrank regularization: %f TH %d llrBlock %d\n", regs[nr].lambda,regs[nr].k,regs[nr].q);
 
-			if (use_gpu)
-				error("GPU operation is not currently implemented for lowrank regularization.\n");
+			// if (use_gpu)
+			// 	error("GPU operation is not currently implemented for lowrank regularization.\n");
 
 
 			// ggg changed to control via flags
@@ -623,6 +776,84 @@ void opt_reg_configure(unsigned int N, const long img_dims[N], struct opt_reg_s*
 			prox_ops[nr] = prox_nonneg_create(DIMS, img_dims);
 			break;
 
+		case L2CH:
+		{
+			debug_printf(DP_INFO, "l2 channels: %f\n", regs[nr].lambda);
+
+			complex float* MMI;
+			long MMI_dims[DIMS];
+
+			MMI = load_cfl("/autofs/space/daisy_002/users/Gilad/gUM/MMI", DIMS, MMI_dims);
+
+			long CurDims[DIMS];
+			md_copy_dims(DIMS, CurDims, img_dims);
+
+			debug_printf(DP_INFO,"MMI_dims : ");
+            debug_print_dims(DP_INFO,DIMS,MMI_dims);
+
+			debug_printf(DP_INFO,"CurDims : ");
+            debug_print_dims(DP_INFO,DIMS,CurDims);
+
+			long SquashFlags=4;
+
+			long MergedDims[DIMS];
+            md_merge_dims(DIMS, MergedDims, CurDims, MMI_dims);
+            long NewDims[DIMS];
+            md_select_dims(DIMS, ~SquashFlags, NewDims, MergedDims);
+            
+			debug_printf(DP_INFO,"MergedDims : ");
+            debug_print_dims(DP_INFO,DIMS,MergedDims);
+
+			debug_printf(DP_INFO,"NewDims : ");
+            debug_print_dims(DP_INFO,DIMS,NewDims);
+
+			long CurFlags=md_nontriv_dims(DIMS,CurDims);
+			long NewFlags=md_nontriv_dims(DIMS,NewDims);
+			long TFlags=md_nontriv_dims(DIMS,MMI_dims);
+
+			// complex float* ET36;
+			// long ET36_dims[DIMS];
+
+			// ET36 = load_cfl("/autofs/space/daisy_002/users/Gilad/gUM/ET36", DIMS, ET36_dims);
+
+			// long MergedDims2[DIMS];
+
+			// long CurFlags2=md_nontriv_dims(DIMS,CurDims);
+			// long NewFlags2=md_nontriv_dims(DIMS,NewDims);
+			// long TFlags2=md_nontriv_dims(DIMS,MMI_dims);
+
+			// const struct linop_s* fmacop2=linop_fmac_create(DIMS, MergedDims, ~CurFlags, ~NewFlags, ~TFlags, ET36);
+
+			const struct linop_s* fmacop=linop_fmac_create(DIMS, MergedDims, ~NewFlags, ~CurFlags, ~TFlags, MMI);
+			// const struct linop_s* fmacop=linop_Hankel_create(DIMS, img_dims,2,6,2);
+
+			const struct linop_s* pp=linop_print_create(DIMS, CurDims, 33);
+			const struct linop_s* pp2=linop_print_create(DIMS, linop_codomain(fmacop)->dims, 44);
+			// const struct linop_s* pp3=linop_print_create(DIMS, CurDims, 55);
+			
+			pp = linop_chain(pp,fmacop);
+			pp = linop_chain(pp,pp2);
+			// pp = linop_chain(pp,fmacop2);
+			// pp = linop_chain(pp,pp3);
+
+			// const struct linop_s* top=linop_transpose_create(DIMS, CurDims, 3,6);
+			// pp = linop_chain(pp,top);
+			// pp = linop_chain(pp,pp3);
+
+            trafos[nr] = pp;
+			// trafos[nr] = linop_Hankel_create(DIMS, img_dims,2,6,2);
+			// trafos[nr] =linop_transpose_create(DIMS, CurDims, 3,6);
+			// trafos[nr] =linop_fmac_create(DIMS, MergedDims, ~NewFlags, ~CurFlags, ~TFlags, MMI);
+
+			// prox_ops[nr] = prox_leastsquares_create(DIMS, NewDims, regs[nr].lambda, NULL);
+			prox_ops[nr] = prox_leastsquares_create(DIMS, linop_codomain(trafos[nr])->dims, regs[nr].lambda, NULL);
+
+			// trafos[nr] = linop_identity_create(DIMS, img_dims);
+			// Do fmac!!!!!!!!!! with CH'*Ch-I
+			
+			// prox_ops[nr] = prox_leastsquares_create(DIMS, img_dims, regs[nr].lambda, NULL);
+			break;
+		}
 
 		case L2IMG:
 			debug_printf(DP_INFO, "l2 regularization: %f\n", regs[nr].lambda);

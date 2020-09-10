@@ -434,6 +434,19 @@ void wavelet_thresh(unsigned int N, float lambda, unsigned int flags, unsigned i
 
 	md_zsoftthresh(N, wdims, lambda, jflags, tmp, tmp);
 
+	if(getCurRegulaizerCost()<0.0f) {
+			// md_zrss(D, dims, flags, tmp_norm, iptr); along jflags??
+		float CurCost=lambda*md_z1norm2(N, wdims, MD_STRIDES(N, wdims, CFL_SIZE), tmp);
+		// float CurCost=lambda*md_zasum(N, wdims, tmp);
+		setCurRegulaizerCost(CurCost);
+	}
+
+	if(getCurRegulaizerCostNoLambda()<0.0f) {
+			// md_zrss(D, dims, flags, tmp_norm, iptr); along jflags??
+		float CurCost=md_z1norm2(N, wdims, MD_STRIDES(N, wdims, CFL_SIZE), tmp);
+		// float CurCost=lambda*md_zasum(N, wdims, tmp);
+		setCurRegulaizerCostNoLambda(CurCost);
+	}
 	iwt2(N, flags, shifts, dims, str, out, wdims, wstr, tmp, minsize, flen, filter);
 
 	md_free(tmp);

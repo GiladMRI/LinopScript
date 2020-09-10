@@ -59,6 +59,9 @@ extern void md_zsqrt(unsigned int D, const long dim[__VLA(D)], _Complex float* o
 extern void md_zspow2(unsigned int D, const long dim[__VLA(D)], const long ostr[__VLA(D)], _Complex float* optr, const long istr[__VLA(D)], const _Complex float* iptr, _Complex float val);
 extern void md_zspow(unsigned int D, const long dim[__VLA(D)], _Complex float* optr, const _Complex float* iptr, _Complex float val);
 
+extern void md_szdiv2(unsigned int D, const long dim[__VLA(D)], const long ostr[__VLA(D)], _Complex float* optr, const long istr[__VLA(D)], const _Complex float* iptr, _Complex float val);
+extern void md_szdiv(unsigned int D, const long dim[__VLA(D)], _Complex float* optr, const _Complex float* iptr, _Complex float val);
+
 extern void md_zaxpy2(unsigned int D, const long dim[__VLA(D)], const long ostr[__VLA(D)], _Complex float* optr, _Complex float val, const long istr1[__VLA(D)], const _Complex float* iptr1);
 extern void md_zaxpy(unsigned int D, const long dim[__VLA(D)], _Complex float* optr, _Complex float val, const _Complex float* iptr1);
 
@@ -293,6 +296,11 @@ extern void md_zfftmod2(unsigned int D, const long dim[__VLA(D)], const long ost
 
 extern void md_zsum(unsigned int D, const long dims[__VLA(D)], unsigned int flags, _Complex float* dst, const _Complex float* src);
 
+
+void setCurRegulaizerCost(float f);
+float getCurRegulaizerCost();
+void setCurRegulaizerCostNoLambda(float f);
+float getCurRegulaizerCostNoLambda();
 
 #include "misc/cppwrap.h"
 
