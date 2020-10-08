@@ -20,13 +20,13 @@ Subspace + B0 phase evolution
 Non-cartesian + Subspace + B0 phase evolution
 
 **SCEPTI:**
-Non-cartesian + Time-segmentation + Subspace + B0 phase evolution
+Non-cartesian + B0 phase evolution through Time-segmentation + Subspace (for T2/T2* decays) 
 
 **T2-Shuffling:**
 Subspace + spatiotemporal trick : https://giladddd.github.io/LinopScript/rrsg.html
 
 **Time-segmentation:**
-Non-cart + Time-segmentation (not accounting for T2*, Sutton/Fessler classic paper)
+Non-cart + B0 phase evolution through Time-segmentation (not accounting for T2*, Sutton/Fessler classic paper)
  
 **SpiMRF:**
 NonCart + Subspace + Spatiotemporal trick through Toeplitz embedding
