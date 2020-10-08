@@ -1,6 +1,7 @@
 # LinopScript
 
 Running BART's parallel-imaging compressed-sensing on more easily defined image-to-signal operators. Enables using BART's solvers (ADMM, ISTA, FISTA) on a variety of MR (and non-MR) recon problems. 
+
 (For BART, see here: https://mrirecon.github.io/bart/)
 
 # Documentation
