@@ -1,27 +1,34 @@
 # LinopScript
 
-Running BART's parallel-imaging compressed-sensing on more easily defined image-to-signal operators.
+Running BART's parallel-imaging compressed-sensing on more easily defined image-to-signal operators. Enables using BART's solvers (ADMM, ISTA, FISTA) on a variety of MR (and non-MR) recon problems. 
 
-Look at the .txt files to see how to define an operator.
-For example, nuftScriptN.txt, is a simple sensitivity maps+nuft operator, with separately defined normal operator using Topelitz embedding:\
-fmac 1 0\
-nufft 0 -1 -1 7 0 0 0 0\
-NORMAL 000\
-f 0\
-dblsz 3\
-fft 3\
-fmac 2 0\
-a 3     This is the adjoint of dblsz, i.e. cropping\
-a 2     This is the adjoint of fft, i.e. ifft\
-a 0
-
-# Manual / documentation / explanations
-Here:
+# Documentation
+Manual here:
 https://docs.google.com/presentation/d/1YmyeK1_T8uhIUAd3G5F9goTb5ghviJb-jwwZZM-SJUE/edit?usp=sharing
 
-# Example
-Here:
-https://giladddd.github.io/LinopScript/rrsg.html
+Presentation given at Martinos center with detailed walk-through (but less updated than the manual): https://docs.google.com/presentation/d/1Tp0DRTxJwQY7UIGnKhTqk1ejsNbuMuFuYASiSinyiTE/edit?usp=sharing
+
+# Examples
+The bart-0.4.04b/matlab/ folder contains many examples, including: 
+
+EPTI:
+Subspace + B0 phase evolution
++ example of partitioning the calculation to reduce GPU memory requirements
+
+PEPTIDE:
+Non-cartesian + Subspace + B0 phase evolution
+
+SCEPTI:
+Non-cartesian + Time-segmentation + Subspace + B0 phase evolution
+
+T2-Shuffling:
+Subspace + spatiotemporal trick : https://giladddd.github.io/LinopScript/rrsg.html
+
+Time-segmentation:
+Non-cart + Time-segmentation (not accounting for T2*, Sutton/Fessler classic paper)
+ 
+SpiMRF:
+NonCart + Subspace + Spatiotemporal trick through Toeplitz embedding
 
 # linopScript command to test operator
 Usage: linopScript \[-N\] \[-A\] \[-j d\] \<OpScriptTxt\> \<StartDims\> \<input\> \[\<file0\> \[\<file\> \[\<file2\> \[...\]\]\]\] \<output\>\
