@@ -9,25 +9,25 @@ https://docs.google.com/presentation/d/1YmyeK1_T8uhIUAd3G5F9goTb5ghviJb-jwwZZM-S
 Presentation given at Martinos center with detailed walk-through (but less updated than the manual): https://docs.google.com/presentation/d/1Tp0DRTxJwQY7UIGnKhTqk1ejsNbuMuFuYASiSinyiTE/edit?usp=sharing
 
 # Examples
-The bart-0.4.04b/matlab/ folder contains many examples, including: 
+The bart-0.4.04b/matlab/ folder contains many examples (LinopScript_... .m), including: 
 
-EPTI:
+**EPTI:**
 Subspace + B0 phase evolution
 + example of partitioning the calculation to reduce GPU memory requirements
 
-PEPTIDE:
+**PEPTIDE:**
 Non-cartesian + Subspace + B0 phase evolution
 
-SCEPTI:
+**SCEPTI:**
 Non-cartesian + Time-segmentation + Subspace + B0 phase evolution
 
-T2-Shuffling:
+**T2-Shuffling:**
 Subspace + spatiotemporal trick : https://giladddd.github.io/LinopScript/rrsg.html
 
-Time-segmentation:
+**Time-segmentation:**
 Non-cart + Time-segmentation (not accounting for T2*, Sutton/Fessler classic paper)
  
-SpiMRF:
+**SpiMRF:**
 NonCart + Subspace + Spatiotemporal trick through Toeplitz embedding
 
 # linopScript command to test operator
