@@ -3,7 +3,7 @@
 Running BART's parallel-imaging compressed-sensing on more easily defined image-to-signal operators. Enables using BART's solvers (ADMM, ISTA, FISTA) on a variety of MR (and non-MR) recon problems. 
 
 # Documentation
-[Manual here.](https://docs.google.com/presentation/d/1YmyeK1_T8uhIUAd3G5F9goTb5ghviJb-jwwZZM-SJUE/edit?usp=sharing)
+[Manual and detailed examples here.](https://docs.google.com/presentation/d/1YmyeK1_T8uhIUAd3G5F9goTb5ghviJb-jwwZZM-SJUE/edit?usp=sharing)
 
 [Presentation](https://docs.google.com/presentation/d/1Tp0DRTxJwQY7UIGnKhTqk1ejsNbuMuFuYASiSinyiTE/edit?usp=sharing) given at the Martinos center with detailed walk-throughs (but less updated than the manual).
 
